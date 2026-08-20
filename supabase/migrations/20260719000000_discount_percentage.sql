@@ -1,0 +1,1 @@
+ALTER TABLE public.articles ADD COLUMN IF NOT EXISTS discount_percentage INTEGER DEFAULT NULL;

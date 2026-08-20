@@ -1,0 +1,17 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "vendly",
+  "compatibility_date": "2025-09-24",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "dist/server/index.js",
+  "assets": {
+    "directory": "dist/client",
+    "binding": "ASSETS"
+  },
+  "vars": {
+    "SUPABASE_URL": "https://haachenuzfjeawjkdplg.supabase.co",
+    "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhhYWNoZW51emZqZWF3amtkcGxnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNTIzMTksImV4cCI6MjA5NjkyODMxOX0.riuNMTyz5FNiUlB-Tt7YhShKWSusQNW3OzAGaBv3Bes",
+    "SUPABASE_ANON_KEY_V2": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhhYWNoZW51emZqZWF3amtkcGxnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNTIzMTksImV4cCI6MjA5NjkyODMxOX0.riuNMTyz5FNiUlB-Tt7YhShKWSusQNW3OzAGaBv3Bes",
+    "SUPABASE_PUBLISHABLE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhhYWNoZW51emZqZWF3amtkcGxnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNTIzMTksImV4cCI6MjA5NjkyODMxOX0.riuNMTyz5FNiUlB-Tt7YhShKWSusQNW3OzAGaBv3Bes",
+  }
+}

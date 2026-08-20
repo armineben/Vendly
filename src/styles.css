@@ -1,0 +1,72 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@source "./**/*.{js,ts,jsx,tsx}";
+
+@theme {
+  /* Typographie Obsidian Slate (Geist) */
+  --font-sans: "Geist", sans-serif;
+  --font-display: "Geist", sans-serif;
+
+  /* Arrondis Obsidian Slate */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  --radius-full: 9999px;
+
+  /* Couleurs Obsidian Slate */
+  --color-background: #f7f9fb;
+  --color-foreground: #191c1e;
+  --color-card: #ffffff;
+  --color-primary: #091426;
+  --color-primary-foreground: #ffffff;
+  --color-muted: #eceef0;
+  --color-muted-foreground: #45474c;
+  --color-border: #e0e3e5;
+  --color-border-strong: #75777d;
+  --color-destructive: #ba1a1a;
+  --color-destructive-foreground: #ffffff;
+}
+
+:root {
+  --background: #f7f9fb;
+  --foreground: #191c1e;
+  --card: #ffffff;
+  --primary: #091426;
+  --primary-foreground: #ffffff;
+  --muted: #eceef0;
+  --muted-foreground: #45474c;
+  --border: #e0e3e5;
+  --border-strong: #75777d;
+  --destructive: #ba1a1a;
+}
+
+@layer base {
+  * { 
+    border-color: var(--color-border); 
+  }
+  html, body { 
+    font-family: var(--font-sans);
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+}
+
+@layer utilities {
+  .text-label-sm {
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 16px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+}
