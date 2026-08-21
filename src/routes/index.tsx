@@ -1,10 +1,22 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
+
+const APP_MODE = (import.meta.env.VITE_APP_MODE || "client") as
+  | "client"
+  | "admin";
 
 export const Route = createFileRoute("/")({ component: WelcomeVendly });
 
 function WelcomeVendly() {
   const navigate = useNavigate();
+
+  // En mode admin, la racine redirige immédiatement vers le dashboard admin
+  useEffect(() => {
+    if (APP_MODE === "admin") {
+      navigate({ to: "/dashboard" });
+    }
+  }, [navigate]);
+
   // États
   const [activeSide, setActiveSide] = useState<"left" | "right">("left");
   const [isCardVisible, setIsCardVisible] = useState(false);
@@ -19,11 +31,6 @@ function WelcomeVendly() {
       return () => clearInterval(interval);
     }
   }, []);
-
-  // Fonction de navigation avec TanStack Router
-  const handleNavigation = (genre: string) => {
-    navigate({ to: "/shop", search: { genre } });
-  };
 
   return (
     <div className="flex flex-col min-h-screen font-serif bg-black">
@@ -52,18 +59,20 @@ function WelcomeVendly() {
           <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-end pb-16 text-white transition-opacity duration-500 hover:bg-black/20 pointer-events-none">
             <h2 className="text-3xl mb-6 font-light font-serif tracking-wide">Homme & Enfant</h2>
             <div className="flex gap-8 pointer-events-auto relative z-50">
-              <button
-                onClick={() => handleNavigation("Mode Homme")}
+              <Link
+                to="/shop"
+                search={{ genre: "Mode Homme" }}
                 className="underline underline-offset-8 tracking-widest text-xs uppercase hover:scale-105 transition-transform font-medium cursor-pointer"
               >
                 Mode Homme
-              </button>
-              <button
-                onClick={() => handleNavigation("Mode Enfant")}
+              </Link>
+              <Link
+                to="/shop"
+                search={{ genre: "Mode Enfant" }}
                 className="underline underline-offset-8 tracking-widest text-xs uppercase hover:scale-105 transition-transform font-medium cursor-pointer"
               >
                 Mode Enfant
-              </button>
+              </Link>
             </div>
           </div>
         </div>
@@ -73,11 +82,14 @@ function WelcomeVendly() {
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 cursor-pointer pointer-events-auto"
           onMouseEnter={() => setIsCardVisible(true)}
           onMouseLeave={() => setIsCardVisible(false)}
-          onClick={() => handleNavigation("")}
         >
-          <h1 className="text-4xl md:text-6xl text-white font-serif tracking-[0.25em] uppercase font-semibold drop-shadow-2xl select-none transition-all hover:scale-105 pointer-events-auto">
+          <Link
+            to="/shop"
+            search={{ genre: "" }}
+            className="text-4xl md:text-6xl text-white font-serif tracking-[0.25em] uppercase font-semibold drop-shadow-2xl select-none transition-all hover:scale-105 pointer-events-auto"
+          >
             VENDLY
-          </h1>
+          </Link>
 
           <div 
             className={`absolute top-full mt-4 left-1/2 -translate-x-1/2 w-[320px] bg-white/10 backdrop-blur-xl border border-white/20 rounded-[2rem] p-8 text-center shadow-2xl transition-all duration-500 ${
@@ -86,12 +98,13 @@ function WelcomeVendly() {
           >
             <h2 className="text-xl font-bold text-white mb-4">Découvrir le Catalogue</h2>
             <p className="text-xs text-white/80 mb-6">Explorez nos dernières collections mode.</p>
-            <button 
-              onClick={() => handleNavigation("")} 
-              className="bg-white text-black text-xs font-bold uppercase py-3 px-6 rounded-full hover:bg-gray-200 transition"
+            <Link
+              to="/shop"
+              search={{ genre: "" }}
+              className="inline-block bg-white text-black text-xs font-bold uppercase py-3 px-6 rounded-full hover:bg-gray-200 transition"
             >
               Accéder au Shop
-            </button>
+            </Link>
           </div>
         </div>
 
@@ -117,12 +130,13 @@ function WelcomeVendly() {
           </video>
           <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-end pb-16 text-white transition-opacity duration-500 hover:bg-black/20 pointer-events-none">
             <h2 className="text-3xl mb-6 font-light font-serif tracking-wide">Mode Femme</h2>
-            <button
-              onClick={() => handleNavigation("Mode Femme")}
+            <Link
+              to="/shop"
+              search={{ genre: "Mode Femme" }}
               className="underline underline-offset-8 tracking-widest text-xs uppercase hover:scale-105 transition-transform font-medium pointer-events-auto relative z-50 cursor-pointer"
             >
               Mode Femme
-            </button>
+            </Link>
           </div>
         </div>
       </main>

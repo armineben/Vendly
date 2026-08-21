@@ -79,6 +79,14 @@ export default {
         }
       }
 
+      // Service Worker temporairement désactivé pour éviter les conflits de chargement
+      if (url.pathname === '/sw.js') {
+        return new Response('Service Worker temporairement désactivé', {
+          status: 200,
+          headers: { 'content-type': 'text/plain' }
+        });
+      }
+
       // Reste du code d'origine (inchangé)
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);

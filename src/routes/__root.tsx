@@ -11,22 +11,35 @@ import appCss from "../styles.css?url";
 import { AuthProvider } from "@/hooks/use-auth";
 import { Toaster } from "@/components/ui/sonner";
 
+const APP_MODE = (import.meta.env.VITE_APP_MODE || "client") as
+  | "client"
+  | "admin";
+const IS_ADMIN_MODE = APP_MODE === "admin";
+
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Vendly — Gestion de stock & ventes" },
+      {
+        title: IS_ADMIN_MODE
+          ? "Vendly Admin — Gestion de stock & ventes"
+          : "Vendly Store — Boutique mode",
+      },
       {
         name: "description",
-        content:
-          "Application de gestion de stock et catalogue intelligent",
+        content: IS_ADMIN_MODE
+          ? "Administration Vendly : gestion de stock, ventes, réservations et équipe"
+          : "Vendly Store : boutique de mode, découverte de nos collections",
       },
       { name: "theme-color", content: "#5C2D91" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
-      { rel: "manifest", href: "/manifest.json" },
+      {
+        rel: "manifest",
+        href: IS_ADMIN_MODE ? "/manifest-admin.json" : "/manifest.json",
+      },
     ],
   }),
   shellComponent: RootShell,
@@ -71,14 +84,26 @@ function RootShell({ children }: { children: React.ReactNode }) {
       <body>
         {children}
         <Scripts />
+        {/* Service Worker temporairement désactivé pour corriger les erreurs de chargement */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
+              // Service Worker temporairement désactivé
+              // if ('serviceWorker' in navigator) {
+              //   window.addEventListener('load', () => {
+              //     navigator.serviceWorker.register('/sw.js')
+              //       .then(reg => console.log('PWA active : Service Worker enregistré !'))
+              //       .catch(err => console.log('Erreur PWA Service Worker:', err));
+              //   });
+              // }
+
+              // Désenregistrer les service workers existants pour éviter les conflits
               if ('serviceWorker' in navigator) {
-                window.addEventListener('load', () => {
-                  navigator.serviceWorker.register('/sw.js')
-                    .then(reg => console.log('PWA active : Service Worker enregistré !'))
-                    .catch(err => console.log('Erreur PWA Service Worker:', err));
+                navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                  for(let registration of registrations) {
+                    registration.unregister();
+                    console.log('Service Worker désenregistré:', registration);
+                  }
                 });
               }
             `,

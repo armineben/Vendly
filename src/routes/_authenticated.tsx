@@ -26,6 +26,10 @@ import { NotificationPopover } from "@/components/NotificationPopover";
 import { TeamChat } from "@/components/TeamChat";
 import { supabase } from "@/integrations/supabase/client";
 
+const APP_MODE = (import.meta.env.VITE_APP_MODE || "client") as
+  | "client"
+  | "admin";
+
 export const Route = createFileRoute("/_authenticated")({
   component: AuthenticatedLayout,
 });
@@ -55,6 +59,13 @@ function AuthenticatedLayout() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useLowStockAlerts(isAdmin);
+
+  // En mode client, l'espace admin est totalement désactivé
+  useEffect(() => {
+    if (APP_MODE === "client") {
+      navigate({ to: "/shop" });
+    }
+  }, [navigate]);
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/login" as any });

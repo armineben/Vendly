@@ -27,6 +27,9 @@ import {
   AlertTriangle,
   Ticket,
   User,
+  LayoutGrid,
+  Grid,
+  List,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import { ZoomableImage } from "@/components/ZoomableImage";
@@ -170,6 +173,7 @@ function DiscountBadge({ percent }: { percent: number }) {
 
 function ProductCard({
   art,
+  viewMode = "grid",
   onQuickView,
   onQuickAdd,
   selectedCouleur,
@@ -178,6 +182,7 @@ function ProductCard({
   onSizeChange,
 }: {
   art: any;
+  viewMode?: "grid" | "compact" | "list";
   onQuickView: (art: any) => void;
   onQuickAdd: (art: any) => void;
   selectedCouleur: string;
@@ -255,10 +260,25 @@ function ProductCard({
     }
   }
 
+  const isList = viewMode === "list";
+  const isCompact = viewMode === "compact";
+
   return (
-    <div className="group cursor-pointer flex flex-col relative">
+    <div
+      className={
+        isList
+          ? "group cursor-pointer flex flex-row gap-5 items-start"
+          : "group cursor-pointer flex flex-col relative"
+      }
+    >
       <div
-        className="relative aspect-[3/4] bg-[#f8f8f8] mb-4 overflow-hidden"
+        className={
+          isList
+            ? "relative w-28 md:w-44 aspect-[3/4] shrink-0 bg-[#f8f8f8] overflow-hidden"
+            : isCompact
+              ? "relative aspect-[3/4] bg-[#f8f8f8] mb-2 overflow-hidden"
+              : "relative aspect-[3/4] bg-[#f8f8f8] mb-4 overflow-hidden"
+        }
         onClick={() => onQuickView(art)}
       >
         {activeImage ? (
@@ -306,8 +326,15 @@ function ProductCard({
         <DiscountBadge percent={getDiscountPercent(art)} />
       </div>
 
+      <div
+        className={
+          isList
+            ? "flex-1 flex flex-col gap-1.5 min-w-0"
+            : "flex flex-col"
+        }
+      >
       {couleursArt.length > 0 && (
-        <div className="flex gap-1.5 mb-3 px-1">
+        <div className={isCompact ? "flex gap-1 mb-1 px-0.5" : "flex gap-1.5 mb-3 px-1"}>
           {couleursArt.slice(0, 5).map((color) => (
             <div
               key={color}
@@ -331,18 +358,20 @@ function ProductCard({
       )}
 
       <div
-        className="text-left px-1 flex-1 flex flex-col"
+        className={isCompact ? "text-left px-0.5 flex-1 flex flex-col" : "text-left px-1 flex-1 flex flex-col"}
         onClick={() => onQuickView(art)}
       >
-        <h3 className="font-semibold text-[13px] text-black uppercase tracking-[0.08em] mb-1 leading-tight">
+        <h3 className={`font-semibold text-black uppercase tracking-[0.08em] mb-1 leading-tight ${isCompact ? "text-[11px]" : "text-[13px]"}`}>
           {art.designation}
         </h3>
-        <p className="font-light text-[12px] text-gray-400 mb-2 line-clamp-1">
-          {art.categorie || art.reference || "Exclusivité Vendly"}
-        </p>
+        {!isCompact && (
+          <p className="font-light text-[12px] text-gray-400 mb-2 line-clamp-1">
+            {art.categorie || art.reference || "Exclusivité Vendly"}
+          </p>
+        )}
         {art.promotion_active && art.prix_promotionnel ? (
           <div className="mt-auto flex items-center gap-1.5">
-            <span className="font-medium text-[13px] text-red-600">
+            <span className={`font-medium text-red-600 ${isCompact ? "text-[11px]" : "text-[13px]"}`}>
               {formatCurrency(art.prix_promotionnel)}
             </span>
             <span className="text-[11px] text-gray-400 line-through">
@@ -350,14 +379,14 @@ function ProductCard({
             </span>
           </div>
         ) : (
-          <span className="font-medium text-[13px] text-black mt-auto">
+          <span className={`font-medium text-black mt-auto ${isCompact ? "text-[11px]" : "text-[13px]"}`}>
             {formatCurrency(art.prix_vente)}
           </span>
         )}
       </div>
 
       {taillesDispo.length > 0 && (
-        <div className="flex flex-wrap gap-1 mt-2 px-1">
+        <div className={isCompact ? "flex flex-wrap gap-1 mt-1 px-0.5" : "flex flex-wrap gap-1 mt-2 px-1"}>
           {taillesDispo.slice(0, 6).map((taille) => (
             <button
               key={taille}
@@ -377,6 +406,7 @@ function ProductCard({
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }
@@ -404,6 +434,7 @@ function Catalogue() {
     null,
   );
   const [filterPromo, setFilterPromo] = useState(false);
+  const [viewMode, setViewMode] = useState<"grid" | "compact" | "list">("grid");
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -1284,6 +1315,41 @@ function Catalogue() {
               <option value="prix_asc">Prix Croissant</option>
               <option value="prix_desc">Prix Décroissant</option>
             </select>
+            <div className="flex items-center gap-1 border-l border-gray-200 pl-4">
+              <button
+                onClick={() => setViewMode("grid")}
+                title="Grille standard"
+                className={`p-1.5 rounded transition-colors ${
+                  viewMode === "grid"
+                    ? "bg-black text-white"
+                    : "text-gray-400 hover:text-black"
+                }`}
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode("compact")}
+                title="Petite grille"
+                className={`p-1.5 rounded transition-colors ${
+                  viewMode === "compact"
+                    ? "bg-black text-white"
+                    : "text-gray-400 hover:text-black"
+                }`}
+              >
+                <Grid className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode("list")}
+                title="Vue liste"
+                className={`p-1.5 rounded transition-colors ${
+                  viewMode === "list"
+                    ? "bg-black text-white"
+                    : "text-gray-400 hover:text-black"
+                }`}
+              >
+                <List className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1308,7 +1374,15 @@ function Catalogue() {
             Aucun produit disponible
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-16 md:gap-x-10 md:gap-y-24">
+          <div
+            className={
+              viewMode === "list"
+                ? "flex flex-col gap-4"
+                : viewMode === "compact"
+                  ? "grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3"
+                  : "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-16 md:gap-x-10 md:gap-y-24"
+            }
+          >
             {filteredArticles.map((art: any) => {
               const couleursArt = Array.from(
                 new Set(
@@ -1321,6 +1395,7 @@ function Catalogue() {
                 <ProductCard
                   key={art.id}
                   art={art}
+                  viewMode={viewMode}
                   onQuickView={handleQuickView}
                   onQuickAdd={addToCart}
                   selectedCouleur={
@@ -1585,3 +1660,5 @@ function Catalogue() {
     </div>
   );
 }
+
+

@@ -1,0 +1,68 @@
+[2m17:58:51[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m Re-optimizing dependencies because lockfile has changed
+
+  [32m[1mVITE[22m v7.3.3[39m  [2mready in [0m[1m7279[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m3000[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://172.20.10.2:[1m3000[22m/[39m
+[vite] connected.
+Processing articles: 0 with variants: 0
+Articles with variants: 0
+Filtered articles: 0
+Filter genre: null
+Filter subcategory: null
+Filter promo: false
+[2m17:59:57[22m [36m[1m[vite][22m[39m [34m[2m(ssr)[22m[39m [32mpage reload [39m[2msrc/routes/shop.tsx[22m
+[vite] program reload
+Processing articles: 0 with variants: 0
+Articles with variants: 0
+Filtered articles: 0
+Filter genre: null
+Filter subcategory: null
+Filter promo: false
+[2m18:04:00[22m [36m[1m[vite][22m[39m [34m[2m(ssr)[22m[39m [32mpage reload [39m[2msrc/routes/shop.tsx[22m
+[vite] program reload
+[2m18:04:09[22m [36m[1m[vite][22m[39m [34m[2m(ssr)[22m[39m [32mpage reload [39m[2msrc/routes/shop.tsx[22m
+Processing articles: 0 with variants: 0
+Articles with variants: 0
+Filtered articles: 0
+Filter genre: null
+Filter subcategory: null
+Filter promo: false
+[2m18:08:10[22m [36m[1m[vite][22m[39m [34m[2m(ssr)[22m[39m [32mpage reload [39m[2msrc/routes/shop.tsx[22m
+[vite] program reload
+[2m18:08:24[22m [36m[1m[vite][22m[39m [34m[2m(ssr)[22m[39m [32mpage reload [39m[2msrc/routes/shop.tsx[22m
+[2m18:08:34[22m [36m[1m[vite][22m[39m [34m[2m(ssr)[22m[39m [32mpage reload [39m[2msrc/routes/shop.tsx[22m
+[2m18:08:51[22m [36m[1m[vite][22m[39m [34m[2m(ssr)[22m[39m [32mpage reload [39m[2msrc/routes/shop.tsx[22m
+[2m18:09:27[22m [36m[1m[vite][22m[39m [34m[2m(ssr)[22m[39m [32mpage reload [39m[2msrc/routes/shop.tsx[22m
+[2m18:09:54[22m [36m[1m[vite][22m[39m [34m[2m(ssr)[22m[39m [32mpage reload [39m[2msrc/routes/shop.tsx[22m
+[2m18:10:22[22m [36m[1m[vite][22m[39m [34m[2m(ssr)[22m[39m [32mpage reload [39m[2msrc/routes/shop.tsx[22m
+[2m18:10:48[22m [36m[1m[vite][22m[39m [34m[2m(ssr)[22m[39m [32mpage reload [39m[2msrc/routes/shop.tsx[22m
+[2m18:11:03[22m [36m[1m[vite][22m[39m [34m[2m(ssr)[22m[39m [32mpage reload [39m[2msrc/routes/shop.tsx[22m
+Processing articles: 0 with variants: 0
+Articles with variants: 0
+Filtered articles: 0
+Filter genre: null
+Filter subcategory: null
+Filter promo: false
+Processing articles: 0 with variants: 0
+Articles with variants: 0
+Filtered articles: 0
+Filter genre: null
+Filter subcategory: null
+Filter promo: false
+[2m18:15:31[22m [36m[1m[vite][22m[39m [34m[2m(ssr)[22m[39m [32mpage reload [39m[2msrc/routes/_authenticated/catalogue.tsx[22m
+[vite] program reload
+[2m18:15:40[22m [36m[1m[vite][22m[39m [34m[2m(ssr)[22m[39m [32mpage reload [39m[2msrc/routes/_authenticated/catalogue.tsx[22m
+[2m18:15:54[22m [36m[1m[vite][22m[39m [34m[2m(ssr)[22m[39m [32mpage reload [39m[2msrc/routes/_authenticated/catalogue.tsx[22m
+[2m18:16:05[22m [36m[1m[vite][22m[39m [34m[2m(ssr)[22m[39m [32mpage reload [39m[2msrc/routes/_authenticated/catalogue.tsx[22m
+[2m18:16:14[22m [36m[1m[vite][22m[39m [34m[2m(ssr)[22m[39m [32mpage reload [39m[2msrc/routes/_authenticated/catalogue.tsx[22m
+[2m18:16:26[22m [36m[1m[vite][22m[39m [34m[2m(ssr)[22m[39m [32mpage reload [39m[2msrc/routes/_authenticated/catalogue.tsx[22m
+[2m18:16:35[22m [36m[1m[vite][22m[39m [34m[2m(ssr)[22m[39m [32mpage reload [39m[2msrc/routes/_authenticated/catalogue.tsx[22m
+[2m18:16:58[22m [36m[1m[vite][22m[39m [34m[2m(ssr)[22m[39m [32mpage reload [39m[2msrc/routes/_authenticated/catalogue.tsx[22m
+[2m18:17:15[22m [36m[1m[vite][22m[39m [34m[2m(ssr)[22m[39m [32mpage reload [39m[2msrc/routes/_authenticated/catalogue.tsx[22m
+[2m18:18:38[22m [36m[1m[vite][22m[39m [34m[2m(ssr)[22m[39m [32mpage reload [39m[2msrc/routes/_authenticated/catalogue.tsx[22m
+[vite] program reload
+[2m18:29:04[22m [36m[1m[vite][22m[39m [34m[2m(ssr)[22m[39m [32mpage reload [39m[2msrc/routes/__root.tsx[22m
+[2m18:29:25[22m [36m[1m[vite][22m[39m [34m[2m(ssr)[22m[39m [32mpage reload [39m[2msrc/routes/index.tsx[22m
+[2m18:29:42[22m [36m[1m[vite][22m[39m [34m[2m(ssr)[22m[39m [32mpage reload [39m[2msrc/routes/_authenticated.tsx[22m
+[2m18:29:59[22m [36m[1m[vite][22m[39m [34m[2m(ssr)[22m[39m [32mpage reload [39m[2msrc/routes/_authenticated.tsx[22m

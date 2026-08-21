@@ -32,6 +32,9 @@ import {
   Star,
   Ticket,
   Truck,
+  LayoutGrid,
+  Grid,
+  List,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { CartConfirmModal } from "@/components/CartConfirmModal";
@@ -168,6 +171,7 @@ function DiscountBadge({ percent }: { percent: number }) {
 
 function ProductCard({
   art,
+  viewMode = "grid",
   onQuickView,
   isFavorite,
   toggleFavorite,
@@ -178,6 +182,7 @@ function ProductCard({
   onAddToCart,
 }: {
   art: any;
+  viewMode?: "grid" | "compact" | "list";
   onQuickView: (art: any) => void;
   isFavorite: boolean;
   toggleFavorite: (id: string, e: React.MouseEvent) => void;
@@ -255,10 +260,25 @@ function ProductCard({
     }
   }
 
+  const isList = viewMode === "list";
+  const isCompact = viewMode === "compact";
+
   return (
-    <div className="group cursor-pointer flex flex-col relative">
+    <div
+      className={
+        isList
+          ? "group cursor-pointer flex flex-row gap-5 items-start"
+          : "group cursor-pointer flex flex-col relative"
+      }
+    >
       <div
-        className="relative aspect-[3/4] bg-[#f8f8f8] mb-4 overflow-hidden"
+        className={
+          isList
+            ? "relative w-28 md:w-44 aspect-[3/4] shrink-0 bg-[#f8f8f8] overflow-hidden"
+            : isCompact
+              ? "relative aspect-[3/4] bg-[#f8f8f8] mb-2 overflow-hidden"
+              : "relative aspect-[3/4] bg-[#f8f8f8] mb-4 overflow-hidden"
+        }
         onClick={() => onQuickView(art)}
       >
         {activeImage ? (
@@ -302,8 +322,15 @@ function ProductCard({
         </button>
       </div>
 
+      <div
+        className={
+          isList
+            ? "flex-1 flex flex-col gap-1.5 min-w-0"
+            : "flex flex-col"
+        }
+      >
       {couleursArt.length > 0 && (
-        <div className="flex gap-1.5 mb-2 px-1">
+        <div className={isCompact ? "flex gap-1 mb-1 px-0.5" : "flex gap-1.5 mb-2 px-1"}>
           {couleursArt.slice(0, 5).map((color) => (
             <div
               key={color}
@@ -331,48 +358,52 @@ function ProductCard({
       )}
 
       {taillesDispo.length > 0 && (
-        <div className="flex flex-wrap gap-1 mb-3 px-1">
+        <div className={isCompact ? "flex flex-wrap gap-1 mb-2 px-0.5" : "flex flex-wrap gap-1 mb-3 px-1"}>
           {taillesDispo.slice(0, 6).map((taille) => {
             const stock = stockForTaille(taille);
             return (
-              <button
-                key={taille}
-                type="button"
-                disabled={stock <= 0}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSizeChange(art.id, taille);
-                }}
-                className={`px-2 py-0.5 text-[9px] font-bold border transition-all uppercase ${
+              <div key={taille} className="relative">
+                <button
+                  type="button"
+                  disabled={stock <= 0}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSizeChange(art.id, taille);
+                  }}
+                  className={`px-2 py-0.5 text-[9px] font-bold border transition-all uppercase ${
                   stock <= 0
                     ? "opacity-25 cursor-not-allowed bg-gray-50 border-gray-100 text-gray-300 line-through"
                     : selectedTaille === taille
                       ? "bg-black text-white border-black"
                       : "bg-white text-gray-500 border-gray-200 hover:border-black"
                 }`}
-              >
-                {taille}
-              </button>
+                >
+                  {taille}
+                </button>
+              </div>
             );
           })}
         </div>
       )}
 
       <div
-        className="text-left px-1 flex-1 flex flex-col"
+        className={isCompact ? "text-left px-0.5 flex-1 flex flex-col" : "text-left px-1 flex-1 flex flex-col"}
         onClick={() => onQuickView(art)}
       >
-        <h3 className="font-semibold text-[13px] text-black uppercase tracking-[0.08em] mb-1 leading-tight">
+        <h3 className={`font-semibold text-black uppercase tracking-[0.08em] mb-1 leading-tight ${isCompact ? "text-[11px]" : "text-[13px]"}`}>
           {art.designation}
         </h3>
-        <p className="font-light text-[12px] text-gray-400 mb-2 line-clamp-1">
-          {art.description ||
-            art.categorie ||
-            art.reference ||
-            "Exclusivité Vendly"}
-        </p>
+        {!isCompact && (
+          <p className="font-light text-[12px] text-gray-400 mb-2 line-clamp-1">
+            {art.description ||
+              art.categorie ||
+              art.reference ||
+              "Exclusivité Vendly"}
+          </p>
+        )}
+
         <div className="flex items-center justify-between mt-auto">
-          <span className="font-medium text-[13px] text-black">
+          <span className={`font-medium text-black ${isCompact ? "text-[11px]" : "text-[13px]"}`}>
             {art.promotion_active && art.prix_promotionnel ? (
               <>
                 <span className="text-red-600">
@@ -391,11 +422,12 @@ function ProductCard({
               e.stopPropagation();
               onAddToCart(art);
             }}
-            className="text-[10px] uppercase tracking-wider font-semibold text-black border border-black px-3 py-1 hover:bg-black hover:text-white transition-colors"
+            className={isCompact ? "text-[9px] uppercase tracking-wider font-semibold text-black border border-black px-2 py-0.5 hover:bg-black hover:text-white transition-colors" : "text-[10px] uppercase tracking-wider font-semibold text-black border border-black px-3 py-1 hover:bg-black hover:text-white transition-colors"}
           >
             +
           </button>
         </div>
+      </div>
       </div>
     </div>
   );
@@ -617,6 +649,7 @@ function ShopPage() {
   );
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [filterPromo, setFilterPromo] = useState(false);
+  const [viewMode, setViewMode] = useState<"grid" | "compact" | "list">("grid");
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   // Détermination dynamique de la vidéo de couverture selon la catégorie sélectionnée
@@ -759,6 +792,13 @@ USING (true);
           throw error;
         }
         console.log("Variantes loaded:", data?.length, "items");
+        if (data && data.length > 0) {
+          console.log("Sample variante:", data[0]);
+          console.log("Available columns:", Object.keys(data[0]));
+          // Log stock distribution
+          const stockDistribution = data.map((v: any) => v.stock).filter((s: any) => s > 0);
+          console.log("Stock distribution:", stockDistribution.length, "variants with stock > 0");
+        }
         return data ?? [];
       } catch (e) {
         console.error("Erreur chargement variantes (shop):", e);
@@ -781,25 +821,6 @@ USING (true);
       } catch (e) {
         console.error("Erreur chargement galeries couleurs (shop):", e);
         return [];
-      }
-    },
-    staleTime: 30_000,
-    retry: 1,
-  });
-
-  const { data: saleCount = 0 } = useQuery({
-    queryKey: ["sale-count-shop"],
-    queryFn: async () => {
-      try {
-        const { count, error } = await supabase
-          .from("articles")
-          .select("*", { count: "exact", head: true })
-          .eq("promotion_active", true);
-        if (error) throw error;
-        return count ?? 0;
-      } catch (e) {
-        console.error("Erreur chargement promo count (shop):", e);
-        return 0;
       }
     },
     staleTime: 30_000,
@@ -835,13 +856,15 @@ USING (true);
       const artVariantes = rawVariantes.filter(
         (v) => v.article_id === article.id,
       );
-      console.log(
-        "Article:",
-        article.designation,
-        "has",
-        artVariantes.length,
-        "variants",
-      );
+      console.log("Article:", article.designation, "has", artVariantes.length, "variants");
+      if (artVariantes.length > 0) {
+        const stockInfo = artVariantes.map((v: any) => ({
+          taille: v.taille,
+          couleur: v.couleur,
+          stock: v.stock
+        }));
+        console.log("  Stock info:", stockInfo);
+      }
       return {
         ...article,
         variantes: artVariantes,
@@ -849,6 +872,17 @@ USING (true);
       };
     });
   }, [rawArticles, rawVariantes, colorGalleriesByArticle]);
+
+  // Compteur de soldes : strictement aligné sur la condition de la liste affichée
+  const saleCount = useMemo(() => {
+    return articlesAvecVariantes.filter(
+      (art: any) =>
+        art.promotion_active === true &&
+        art.archived !== true &&
+        art.status !== "archive" &&
+        art.status !== "supprime",
+    ).length;
+  }, [articlesAvecVariantes]);
 
   const handleFilterClick = (genre: string, subCategory: string | null) => {
     setFilterGenre(genre);
@@ -2025,14 +2059,6 @@ USING (true);
             {heroTitle.default || "Collection Exclusive"}
           </h1>
         )}
-        {(filterGenre || filterSubCategory || filterPromo) && (
-          <button
-            onClick={clearAllFilters}
-            className="mt-3 text-[10px] text-gray-400 hover:text-black uppercase tracking-[0.2em] underline underline-offset-4"
-          >
-            Réinitialiser les filtres
-          </button>
-        )}
         <p className="text-gray-500 font-light text-[11px] md:text-xs tracking-[0.15em] uppercase mt-3">
           {filterGenre === "Mode Homme"
             ? heroSubtitle.homme || "Savoir-faire et Élégance"
@@ -2068,9 +2094,15 @@ USING (true);
                 {filterSubCategory && <> &gt; {filterSubCategory}</>}
               </span>
             )}
+            {filterPromo && (
+              <span className="text-black">
+                {" "}
+                • Soldes
+              </span>
+            )}
           </p>
           <div className="flex gap-4 items-center">
-            {(filterGenre || showFavoritesOnly) && (
+            {(filterGenre || filterPromo || showFavoritesOnly) && (
               <button
                 onClick={() => {
                   clearAllFilters();
@@ -2090,6 +2122,41 @@ USING (true);
               <option value="prix_asc">Prix Croissant</option>
               <option value="prix_desc">Prix Décroissant</option>
             </select>
+            <div className="flex items-center gap-1 border-l border-gray-200 pl-4">
+              <button
+                onClick={() => setViewMode("grid")}
+                title="Grille standard"
+                className={`p-1.5 rounded transition-colors ${
+                  viewMode === "grid"
+                    ? "bg-black text-white"
+                    : "text-gray-400 hover:text-black"
+                }`}
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode("compact")}
+                title="Petite grille"
+                className={`p-1.5 rounded transition-colors ${
+                  viewMode === "compact"
+                    ? "bg-black text-white"
+                    : "text-gray-400 hover:text-black"
+                }`}
+              >
+                <Grid className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode("list")}
+                title="Vue liste"
+                className={`p-1.5 rounded transition-colors ${
+                  viewMode === "list"
+                    ? "bg-black text-white"
+                    : "text-gray-400 hover:text-black"
+                }`}
+              >
+                <List className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -2104,7 +2171,9 @@ USING (true);
           <div className="text-center py-28 flex flex-col items-center gap-8">
             <div className="w-16 h-px bg-gray-200" />
             <p className="text-sm font-medium text-gray-500 uppercase tracking-[0.15em]">
-              Aucun article dans cette catégorie pour le moment.
+              {filterPromo
+                ? "Aucun article en solde pour le moment."
+                : "Aucun article dans cette catégorie pour le moment."}
             </p>
             <button
               onClick={clearAllFilters}
@@ -2114,11 +2183,20 @@ USING (true);
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-16 md:gap-x-10 md:gap-y-24">
+          <div
+            className={
+              viewMode === "list"
+                ? "flex flex-col gap-4"
+                : viewMode === "compact"
+                  ? "grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3"
+                  : "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-16 md:gap-x-10 md:gap-y-24"
+            }
+          >
             {filteredAndSortedArticles.map((art: any) => (
               <ProductCard
                 key={art.id}
                 art={art}
+                viewMode={viewMode}
                 onQuickView={handleQuickView}
                 isFavorite={favorites.includes(art.id)}
                 toggleFavorite={toggleFavorite}

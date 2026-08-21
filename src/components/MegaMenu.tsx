@@ -177,17 +177,20 @@ export function MegaMenu({
           Tout
         </button>
 
-        {saleCount > 0 && (
-          <button
-            onClick={() => {
-              if (onSelectSale) onSelectSale();
-              setActiveDropdown(null);
-            }}
-            className={`text-[11px] font-semibold uppercase tracking-[0.15em] transition-all pb-1 border-b-2 ${isSaleActive ? "border-red-600 text-red-600" : "border-transparent text-red-500 hover:text-red-600"}`}
-          >
-            Soldes
-          </button>
-        )}
+        <button
+          onClick={() => {
+            if (onSelectSale) onSelectSale();
+            setActiveDropdown(null);
+          }}
+          className={`text-[11px] font-semibold uppercase tracking-[0.15em] transition-all pb-1 border-b-2 ${isSaleActive ? "border-red-600 text-red-600" : "border-transparent text-red-500 hover:text-red-600"}`}
+        >
+          Soldes
+          {saleCount > 0 && (
+            <span className="ml-1 text-[10px] text-red-500 font-bold">
+              ({saleCount})
+            </span>
+          )}
+        </button>
 
         {items.map((item) => (
           <div
