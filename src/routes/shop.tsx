@@ -1250,10 +1250,28 @@ USING (true);
           shipping_fees: SHIPPING_FEE,
           delivery_status: "prepared",
         };
-        const { error: delError } = await supabase
-          .from("commandes_livraison")
-          .insert([deliveryPayload]);
-        if (delError) throw delError;
+        // Colonnes absentes de la table (avant migration SQL) : retry avec les colonnes existantes
+        const insertDelivery = async (payload: Record<string, any>) => {
+          const { error } = await supabase
+            .from("commandes_livraison")
+            .insert([payload]);
+          if (!error) return;
+          if (error.code === "42703") {
+            const fallback = { ...payload };
+            delete fallback.items;
+            delete fallback.client_email;
+            delete fallback.client_city;
+            delete fallback.client_governorate;
+            delete fallback.shipping_fees;
+            const { error: err2 } = await supabase
+              .from("commandes_livraison")
+              .insert([fallback]);
+            if (err2) throw err2;
+            return;
+          }
+          throw error;
+        };
+        await insertDelivery(deliveryPayload);
         await decrementStock();
       } else {
         const { error: resError } = await supabase.from("reservations").insert([
