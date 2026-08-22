@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { CartConfirmModal } from "@/components/CartConfirmModal";
+import { CheckoutDrawer } from "@/components/CheckoutDrawer";
 import { ReservationModal } from "@/components/ReservationModal";
 import { StockConflictAlert } from "@/components/StockConflictAlert";
 import { InvoiceModal } from "@/components/InvoiceModal";
@@ -452,6 +453,10 @@ function ShopPage() {
     nom: "",
     prenom: "",
     telephone: "",
+    email: "",
+    governorate: "",
+    city: "",
+    address: "",
   });
   const [deliveryData, setDeliveryData] = useState({
     address: "",
@@ -1223,32 +1228,28 @@ USING (true);
         await decrementStock();
       } else if (confirmMode === "delivery") {
         if (
-          !deliveryData.address.trim() ||
-          !customerData.nom.trim() ||
-          !customerData.telephone.trim()
+          !customerData.address.trim() ||
+          !customerData.telephone.trim() ||
+          !customerData.governorate
         ) {
           throw new Error(
-            "Veuillez remplir le Nom, Téléphone et Adresse de livraison.",
+            "Veuillez remplir le Nom, Téléphone, Gouvernorat et Adresse de livraison.",
           );
         }
+        const SHIPPING_FEE = 8;
         const deliveryPayload: Record<string, any> = {
           items: cartItems,
-          total_price: cartTotal + deliveryData.shippingFees,
+          total_price: cartTotal + SHIPPING_FEE,
           client_firstname: customerData.prenom,
           client_lastname: customerData.nom,
           client_phone: customerData.telephone,
-          client_address: deliveryData.address,
+          client_email: customerData.email || undefined,
+          client_address: customerData.address,
+          client_city: customerData.city || undefined,
+          client_governorate: customerData.governorate,
+          shipping_fees: SHIPPING_FEE,
           delivery_status: "prepared",
         };
-        if (deliveryData.shippingFees > 0)
-          deliveryPayload.shipping_fees = deliveryData.shippingFees;
-        if (deliveryData.city) deliveryPayload.client_city = deliveryData.city;
-        if (deliveryData.governorate)
-          deliveryPayload.client_governorate = deliveryData.governorate;
-        if (deliveryData.courierNotes)
-          deliveryPayload.courier_notes = deliveryData.courierNotes;
-        if (deliveryData.courierCompany)
-          deliveryPayload.courier_company = deliveryData.courierCompany;
         const { error: delError } = await supabase
           .from("commandes_livraison")
           .insert([deliveryPayload]);
@@ -1291,16 +1292,16 @@ USING (true);
               : undefined,
           customerPhone: customerData.telephone || undefined,
           customerAddress:
-            confirmMode === "delivery" ? deliveryData.address : undefined,
+            confirmMode === "delivery" ? customerData.address : undefined,
           items: [...cart],
           subtotal: subTotal,
           discountPercent: appliedDiscount > 0 ? appliedDiscount : undefined,
           discountCode: activePromoCode || undefined,
           shippingFees:
-            confirmMode === "delivery" ? deliveryData.shippingFees : undefined,
+            confirmMode === "delivery" ? 8 : undefined,
           total:
             cartTotal +
-            (confirmMode === "delivery" ? deliveryData.shippingFees : 0),
+            (confirmMode === "delivery" ? 8 : 0),
           isDelivery: confirmMode === "delivery",
         });
       }
@@ -1319,6 +1320,21 @@ USING (true);
       toast.error(error.message || "Erreur lors de la validation.");
     },
   });
+
+  const handleConfirmCheckout = () => {
+    if (
+      !customerData.nom.trim() ||
+      !customerData.prenom.trim() ||
+      !customerData.telephone.trim() ||
+      !customerData.governorate ||
+      !customerData.address.trim()
+    ) {
+      toast.error("Veuillez remplir tous les champs obligatoires (nom, téléphone, gouvernorat, adresse).");
+      return;
+    }
+    setConfirmMode("delivery");
+    checkoutMutation.mutate();
+  };
 
   const modalExtraSections = selectedProduct && (
     <>
@@ -1633,331 +1649,17 @@ USING (true);
               )}
             </div>
 
-            <Sheet
-              open={isCartOpen}
-              onOpenChange={(open) => {
-                setIsCartOpen(open);
-                if (!open) setShowCheckoutForm(false);
-              }}
+            <div
+              className="relative cursor-pointer hover:opacity-60 transition-opacity"
+              onClick={() => setIsCartOpen(true)}
             >
-              <SheetTrigger asChild>
-                <div className="relative cursor-pointer hover:opacity-60 transition-opacity">
-                  <ShoppingBag className="w-5 h-5 stroke-[1.2] text-black" />
-                  {cartCount > 0 && (
-                    <span className="absolute -top-1.5 -right-2 bg-black text-white text-[9px] w-3.5 h-3.5 rounded-full flex items-center justify-center font-bold">
-                      {cartCount}
-                    </span>
-                  )}
-                </div>
-              </SheetTrigger>
-              <SheetContent className="w-full sm:max-w-md bg-white p-6 flex flex-col justify-between z-[100]">
-                <div>
-                  <SheetHeader className="border-b border-gray-100 pb-4 mb-6">
-                    <SheetTitle className="font-medium text-lg uppercase tracking-[0.1em] text-center">
-                      Votre Panier
-                    </SheetTitle>
-                  </SheetHeader>
-                  {cart.length === 0 ? (
-                    <div className="text-center py-16 text-gray-400 text-sm font-light tracking-widest uppercase">
-                      Votre panier est vide
-                    </div>
-                  ) : (
-                    <div className="space-y-6 overflow-y-auto max-h-[60vh] pr-2">
-                      {cart.map((item) => (
-                        <div key={item.variante_id} className="flex gap-4">
-                          <img
-                            src={item.image}
-                            alt={item.designation}
-                            className="w-20 h-24 object-cover bg-gray-50"
-                          />
-                          <div className="flex-1 min-w-0 py-1">
-                            <h4 className="font-medium text-[12px] uppercase tracking-[0.05em] truncate mb-1">
-                              {item.designation}
-                            </h4>
-                            <p className="text-[11px] font-light text-gray-500 mb-2">
-                              Taille : {item.taille_selectionnee} <br /> Couleur
-                              : {item.couleur_selectionnee}
-                            </p>
-                            <p className="text-[13px] font-medium">
-                              {formatCurrency(item.prix_vente)}
-                            </p>
-                          </div>
-                          <div className="flex flex-col justify-between items-end py-1">
-                            <button
-                              onClick={() => removeFromCart(item.variante_id)}
-                              className="text-gray-400 hover:text-black"
-                            >
-                              <X className="w-4 h-4 stroke-[1.5]" />
-                            </button>
-                            <div className="flex items-center gap-3 border border-gray-200 px-2 py-1">
-                              <button
-                                onClick={() =>
-                                  updateQuantity(item.variante_id, -1)
-                                }
-                              >
-                                <Minus className="w-3 h-3" />
-                              </button>
-                              <span className="text-[11px]">
-                                {item.quantite_selectionnee}
-                              </span>
-                              <button
-                                onClick={() =>
-                                  updateQuantity(item.variante_id, 1)
-                                }
-                              >
-                                <Plus className="w-3 h-3" />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                {cart.length > 0 && (
-                  <div className="border-t border-gray-100 pt-4 space-y-4 mt-4">
-                    <div className="flex gap-2">
-                      <Input
-                        type="text"
-                        placeholder="Code promo"
-                        value={promoInput}
-                        onChange={(e) => setPromoInput(e.target.value)}
-                        className="h-9 text-xs rounded-none border-gray-200"
-                      />
-                      <Button
-                        onClick={handleApplyPromo}
-                        variant="outline"
-                        size="sm"
-                        className="h-9 text-xs rounded-none border-gray-200"
-                      >
-                        <Ticket className="w-3.5 h-3.5 mr-1" /> Appliquer
-                      </Button>
-                    </div>
-
-                    {appliedDiscount > 0 && (
-                      <div className="flex items-center justify-between text-xs text-red-600 bg-red-50 px-3 py-2">
-                        <span>Code {activePromoCode} :</span>
-                        <span className="font-bold">
-                          -{formatCurrency(discountAmount)}
-                        </span>
-                      </div>
-                    )}
-
-                    <div className="flex justify-between font-medium text-sm tracking-[0.05em] uppercase">
-                      <span>Total</span>
-                      <span>{formatCurrency(cartTotal)}</span>
-                    </div>
-
-                    {showCheckoutForm ? (
-                      <div className="space-y-3">
-                        {/* Achat sur place : juste les infos optionnelles */}
-                        {checkoutMode === "purchase" && (
-                          <>
-                            <Input
-                              placeholder="Prénom (optionnel)"
-                              value={customerData.prenom}
-                              onChange={(e) =>
-                                setCustomerData((p) => ({
-                                  ...p,
-                                  prenom: e.target.value,
-                                }))
-                              }
-                              className="rounded-none border-gray-200 focus-visible:ring-black"
-                            />
-                            <Input
-                              placeholder="Nom (optionnel)"
-                              value={customerData.nom}
-                              onChange={(e) =>
-                                setCustomerData((p) => ({
-                                  ...p,
-                                  nom: e.target.value,
-                                }))
-                              }
-                              className="rounded-none border-gray-200 focus-visible:ring-black"
-                            />
-                          </>
-                        )}
-
-                        {/* Livraison : formulaire complet */}
-                        {checkoutMode === "delivery" && (
-                          <div className="space-y-2.5 max-h-[280px] overflow-y-auto pr-1">
-                            <div className="grid grid-cols-2 gap-2">
-                              <Input
-                                placeholder="Prénom *"
-                                value={customerData.prenom}
-                                onChange={(e) =>
-                                  setCustomerData((p) => ({
-                                    ...p,
-                                    prenom: e.target.value,
-                                  }))
-                                }
-                                className="rounded-none border-gray-200 focus-visible:ring-black"
-                              />
-                              <Input
-                                placeholder="Nom *"
-                                value={customerData.nom}
-                                onChange={(e) =>
-                                  setCustomerData((p) => ({
-                                    ...p,
-                                    nom: e.target.value,
-                                  }))
-                                }
-                                className="rounded-none border-gray-200 focus-visible:ring-black"
-                              />
-                            </div>
-                            <Input
-                              placeholder="Téléphone *"
-                              value={customerData.telephone}
-                              onChange={(e) =>
-                                setCustomerData((p) => ({
-                                  ...p,
-                                  telephone: e.target.value,
-                                }))
-                              }
-                              className="rounded-none border-gray-200 focus-visible:ring-black"
-                            />
-                            <Input
-                              placeholder="Adresse *"
-                              value={deliveryData.address}
-                              onChange={(e) =>
-                                setDeliveryData((p) => ({
-                                  ...p,
-                                  address: e.target.value,
-                                }))
-                              }
-                              className="rounded-none border-gray-200 focus-visible:ring-black"
-                            />
-                            <div className="grid grid-cols-2 gap-2">
-                              <Input
-                                placeholder="Ville"
-                                value={deliveryData.city}
-                                onChange={(e) =>
-                                  setDeliveryData((p) => ({
-                                    ...p,
-                                    city: e.target.value,
-                                  }))
-                                }
-                                className="rounded-none border-gray-200 focus-visible:ring-black"
-                              />
-                              <Input
-                                placeholder="Gouvernorat"
-                                value={deliveryData.governorate}
-                                onChange={(e) =>
-                                  setDeliveryData((p) => ({
-                                    ...p,
-                                    governorate: e.target.value,
-                                  }))
-                                }
-                                className="rounded-none border-gray-200 focus-visible:ring-black"
-                              />
-                            </div>
-                            <Input
-                              placeholder="Remarques (optionnel)"
-                              value={deliveryData.courierNotes}
-                              onChange={(e) =>
-                                setDeliveryData((p) => ({
-                                  ...p,
-                                  courierNotes: e.target.value,
-                                }))
-                              }
-                              className="rounded-none border-gray-200 focus-visible:ring-black"
-                            />
-                          </div>
-                        )}
-
-                        {/* Réservation : nom + téléphone */}
-                        {checkoutMode === "reservation" && (
-                          <>
-                            <Input
-                              placeholder="Prénom"
-                              value={customerData.prenom}
-                              onChange={(e) =>
-                                setCustomerData((p) => ({
-                                  ...p,
-                                  prenom: e.target.value,
-                                }))
-                              }
-                              className="rounded-none border-gray-200 focus-visible:ring-black"
-                            />
-                            <Input
-                              placeholder="Nom *"
-                              value={customerData.nom}
-                              onChange={(e) =>
-                                setCustomerData((p) => ({
-                                  ...p,
-                                  nom: e.target.value,
-                                }))
-                              }
-                              className="rounded-none border-gray-200 focus-visible:ring-black"
-                            />
-                            <Input
-                              placeholder="Téléphone *"
-                              value={customerData.telephone}
-                              onChange={(e) =>
-                                setCustomerData((p) => ({
-                                  ...p,
-                                  telephone: e.target.value,
-                                }))
-                              }
-                              className="rounded-none border-gray-200 focus-visible:ring-black"
-                            />
-                          </>
-                        )}
-
-                        <div className="flex gap-2 pt-2">
-                          <Button
-                            variant="outline"
-                            className="w-1/3 rounded-none border-gray-200 text-xs uppercase tracking-widest"
-                            onClick={() => setShowCheckoutForm(false)}
-                          >
-                            Retour
-                          </Button>
-                          <Button
-                            className="w-2/3 bg-black text-white hover:bg-gray-800 rounded-none text-xs uppercase tracking-widest"
-                            onClick={() => setShowCartConfirm(true)}
-                            disabled={checkoutMutation.isPending}
-                          >
-                            {checkoutMutation.isPending
-                              ? "Traitement..."
-                              : "Confirmer"}
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-2.5">
-                        <Button
-                          className="w-full bg-black text-white hover:bg-gray-800 rounded-none h-11 text-[11px] tracking-[0.1em] uppercase font-medium"
-                          onClick={() => {
-                            setCheckoutMode("purchase");
-                            setConfirmMode("purchase");
-                            setShowCheckoutForm(true);
-                          }}
-                        >
-                          Achat sur place
-                        </Button>
-                        <Button
-                          className="w-full bg-blue-600 text-white hover:bg-blue-700 rounded-none h-11 text-[11px] tracking-[0.1em] uppercase font-medium"
-                          onClick={() => {
-                            setCheckoutMode("delivery");
-                            setConfirmMode("delivery");
-                            setShowCheckoutForm(true);
-                          }}
-                        >
-                          <Truck className="h-3.5 w-3.5 mr-2" /> Livraison
-                        </Button>
-                        <Button
-                          variant="outline"
-                          className="w-full border-gray-300 text-black hover:bg-gray-50 rounded-none h-11 text-[11px] tracking-[0.1em] uppercase font-medium"
-                          onClick={() => setShowReservationModal(true)}
-                        >
-                          Réserver en boutique
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </SheetContent>
-            </Sheet>
+              <ShoppingBag className="w-5 h-5 stroke-[1.2] text-black" />
+              {cartCount > 0 && (
+                <span className="absolute -top-1.5 -right-2 bg-black text-white text-[9px] w-3.5 h-3.5 rounded-full flex items-center justify-center font-bold">
+                  {cartCount}
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -2260,9 +1962,7 @@ USING (true);
                 addToCart(selectedProduct!, couleur, taille);
                 setSelectedProduct(null);
                 setIsCartOpen(true);
-                setCheckoutMode("reservation");
-                setConfirmMode("reservation");
-                setShowCheckoutForm(true);
+                setShowReservationModal(true);
               }}
             >
               Réserver en boutique
@@ -2293,6 +1993,27 @@ USING (true);
         }}
         reservations={conflictData?.reservations || []}
       />
+
+      {isCartOpen && (
+        <CheckoutDrawer
+          cart={cart}
+          cartTotal={cartTotal}
+          subTotal={subTotal}
+          discountAmount={discountAmount}
+          appliedDiscount={appliedDiscount}
+          activePromoCode={activePromoCode}
+          promoInput={promoInput}
+          customerData={customerData}
+          checkoutMutation={checkoutMutation}
+          onClose={() => setIsCartOpen(false)}
+          onUpdateQuantity={updateQuantity}
+          onRemoveFromCart={removeFromCart}
+          onApplyPromo={handleApplyPromo}
+          onSetPromoInput={setPromoInput}
+          onCustomerDataChange={setCustomerData}
+          onConfirm={handleConfirmCheckout}
+        />
+      )}
 
       <CartConfirmModal
         open={showCartConfirm}
