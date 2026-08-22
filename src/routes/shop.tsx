@@ -530,7 +530,14 @@ function ShopPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [favorites, setFavorites] = useState<string[]>([]);
+  const [favorites, setFavorites] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem("vendly-favorites");
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showCheckoutForm, setShowCheckoutForm] = useState(false);
   const [checkoutMode, setCheckoutMode] = useState<
@@ -1115,9 +1122,15 @@ USING (true);
 
   const toggleFavorite = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setFavorites((prev) =>
-      prev.includes(id) ? prev.filter((fId) => fId !== id) : [...prev, id],
-    );
+    setFavorites((prev) => {
+      const next = prev.includes(id)
+        ? prev.filter((fId) => fId !== id)
+        : [...prev, id];
+      try {
+        localStorage.setItem("vendly-favorites", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
     toast.success(
       favorites.includes(id) ? "Retiré des favoris" : "Ajouté aux favoris",
     );
@@ -2317,14 +2330,14 @@ USING (true);
             </div>
             <div className="px-8 py-8 space-y-4">
               <Link
-                to="/login"
+                to="/compte"
                 className="block w-full text-center bg-black text-white py-3 text-xs font-bold uppercase tracking-[0.2em] hover:bg-gray-800 transition-colors"
                 onClick={() => setIsAccountOpen(false)}
               >
                 Se connecter
               </Link>
               <Link
-                to="/login"
+                to="/compte"
                 className="block w-full text-center border border-gray-300 text-black py-3 text-xs font-bold uppercase tracking-[0.2em] hover:bg-gray-50 transition-colors"
                 onClick={() => setIsAccountOpen(false)}
               >
