@@ -13,7 +13,8 @@
     "deploy:admin": "npm run build:admin && wrangler deploy --name vendly-admin",
     "deploy:client": "npm run build:client && wrangler deploy --name vendly",
     "build:pages": "npm run build && node scripts/build-pages.mjs",
-    "deploy:pages": "npm run build:pages && wrangler pages deploy dist/pages --project-name vendly",
+    "deploy:pages": "npm run build:client && node scripts/generate-static.mjs client && wrangler pages deploy dist/client --project-name vendly-store",
+    "deploy:pages:admin": "npm run build:admin && node scripts/generate-static.mjs admin && wrangler pages deploy dist/client --project-name vendly-admin",
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write ."
