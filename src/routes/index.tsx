@@ -1,5 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, type FormEvent } from "react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const APP_MODE = (import.meta.env.VITE_APP_MODE || "client") as
   | "client"
@@ -20,6 +22,39 @@ function WelcomeVendly() {
   // États
   const [activeSide, setActiveSide] = useState<"left" | "right">("left");
   const [isCardVisible, setIsCardVisible] = useState(false);
+  const [newsletterEmail, setNewsletterEmail] = useState("");
+  const [subscribing, setSubscribing] = useState(false);
+  const [subscribed, setSubscribed] = useState(false);
+
+  const handleNewsletterSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    const email = newsletterEmail.trim();
+    if (!email || !email.includes("@")) {
+      toast.error("Veuillez saisir une adresse email valide.");
+      return;
+    }
+    setSubscribing(true);
+    try {
+      const { error } = await supabase
+        .from("newsletter_subscribers")
+        .insert({ email });
+      if (error) {
+        if (error.code === "23505") {
+          toast.success("Vous êtes déjà inscrit à notre newsletter !");
+        } else {
+          toast.error("Erreur lors de l'inscription. Veuillez réessayer.");
+        }
+        return;
+      }
+      setSubscribed(true);
+      setNewsletterEmail("");
+      toast.success("Merci ! Vous êtes bien inscrit à notre newsletter.");
+    } catch {
+      toast.error("Erreur réseau. Veuillez réessayer.");
+    } finally {
+      setSubscribing(false);
+    }
+  };
 
   // Rotation automatique sur mobile
   useEffect(() => {
@@ -150,7 +185,27 @@ function WelcomeVendly() {
           </div>
           <div>
             <h3 className="font-bold mb-4 uppercase">Newsletter</h3>
-            <input type="email" placeholder="Votre email" className="border-b border-black w-full py-1 focus:outline-none"/>
+            {subscribed ? (
+              <p className="text-xs text-gray-600">✅ Inscrit avec succès !</p>
+            ) : (
+              <form onSubmit={handleNewsletterSubmit} className="flex gap-2">
+                <input
+                  type="email"
+                  value={newsletterEmail}
+                  onChange={(e) => setNewsletterEmail(e.target.value)}
+                  placeholder="Votre email"
+                  disabled={subscribing}
+                  className="flex-1 border-b border-black py-1 text-sm focus:outline-none disabled:opacity-50"
+                />
+                <button
+                  type="submit"
+                  disabled={subscribing}
+                  className="text-xs font-bold uppercase tracking-wider whitespace-nowrap hover:opacity-60 transition-opacity disabled:opacity-40"
+                >
+                  {subscribing ? "..." : "OK"}
+                </button>
+              </form>
+            )}
           </div>
           <div>
             <h3 className="font-bold mb-4 uppercase">Suivez-nous</h3>
