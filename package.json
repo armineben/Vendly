@@ -10,6 +10,8 @@
     "build:client": "vite build --mode client",
     "build:admin": "vite build --mode admin",
     "deploy": "npm run build && wrangler deploy",
+    "deploy:admin": "npm run build:admin && wrangler deploy --name vendly-admin",
+    "deploy:client": "npm run build:client && wrangler deploy --name vendly",
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write ."
