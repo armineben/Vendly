@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "vendly",
+  "compatibility_date": "2025-09-24",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "./src/server.ts",
+  "observability": {
+    "enabled": true
+  },
+  "assets": {
+    "directory": "./dist/client",
+    "binding": "ASSETS"
+  },
+  "vars": {
+    "SUPABASE_URL": "https://lhuwgivsexzfpftioweg.supabase.co",
+    "SUPABASE_PUBLISHABLE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxodXdnaXZzZXh6ZnBmdGlvd2VnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyNzQzNDksImV4cCI6MjA5OTg1MDM0OX0.mAuL5uDAN3SDSlJ6s7mikReorzH_USu_rH-Tl2CfYOA",
+    "SUPABASE_SERVICE_ROLE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxodXdnaXZzZXh6ZnBmdGlvd2VnIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NDI3NDM0OSwiZXhwIjoyMDk5ODUwMzQ5fQ.46IPhGstlJP4cZ0c6FE2dWtvtiVoCk2-vuQfQwH-DSA"
+  }
+}
