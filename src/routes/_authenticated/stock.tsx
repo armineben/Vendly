@@ -308,34 +308,6 @@ function StockPage() {
         </div>
         
         <div className="flex flex-wrap items-center gap-2">
-          {isAdmin && selectedIds.length > 0 && (
-            <>
-              <Button
-                variant="outline"
-                onClick={() => handleBulkNew(true)}
-                className="border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 text-xs font-bold shadow-sm transition-all"
-              >
-                <Sparkles className="mr-2 h-3.5 w-3.5" /> Nouveau ({selectedIds.length})
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => handleBulkNew(false)}
-                className="border-slate-200 text-slate-600 hover:bg-slate-100 text-xs font-bold shadow-sm transition-all"
-              >
-                <Sparkles className="mr-2 h-3.5 w-3.5 opacity-40" /> Retirer nouveau
-              </Button>
-            </>
-          )}
-          {isAdmin && selectedIds.length > 0 && (
-            <Button 
-              variant="destructive" 
-              onClick={handleBulkTrash}
-              className="bg-red-600 hover:bg-red-700 text-white shadow-sm transition-all text-xs font-bold"
-            >
-              <Trash2 className="mr-2 h-3.5 w-3.5" /> Corbeille ({selectedIds.length})
-            </Button>
-          )}
-
           <Button variant="outline" onClick={exportXlsx} className="text-xs font-bold border-border bg-white text-black shadow-2xs hover:bg-[#fafafa]">
             <Download className="mr-2 h-3.5 w-3.5 text-[#747878]" /> Exporter
           </Button>
@@ -455,6 +427,51 @@ function StockPage() {
           </Select>
         </div>
       </div>
+
+      {selectedIds.length > 0 && (
+        <div className="bg-indigo-50 border border-indigo-200 rounded-xl px-5 py-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-indigo-500" />
+            <span className="text-sm font-semibold text-indigo-900">
+              {selectedIds.length} article{selectedIds.length > 1 ? "s" : ""} sélectionné{selectedIds.length > 1 ? "s" : ""}
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleBulkNew(true)}
+              className="border-indigo-300 text-indigo-700 bg-white hover:bg-indigo-50 text-xs font-bold shadow-sm"
+            >
+              <Sparkles className="mr-1.5 h-3.5 w-3.5" /> Marquer comme Nouveau
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleBulkNew(false)}
+              className="border-slate-300 text-slate-600 bg-white hover:bg-slate-50 text-xs font-bold shadow-sm"
+            >
+              <Sparkles className="mr-1.5 h-3.5 w-3.5 opacity-40" /> Retirer des nouveautés
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleBulkTrash}
+              className="border-red-200 text-red-600 bg-white hover:bg-red-50 text-xs font-bold shadow-sm"
+            >
+              <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Corbeille ({selectedIds.length})
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedIds([])}
+              className="text-slate-400 hover:text-slate-600 text-xs"
+            >
+              Décocher tout
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="overflow-hidden rounded-xl border border-border bg-white shadow-2xs">
         <div className="overflow-x-auto">
