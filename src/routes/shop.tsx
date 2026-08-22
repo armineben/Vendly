@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
-import { formatCurrency } from "@/lib/format";
 import { MegaMenu, MEGA_MENU_ITEMS } from "@/components/MegaMenu";
 import { ProductQuickView } from "@/components/ProductQuickView";
 import { categoryMatchesFilter } from "@/lib/categories";
@@ -35,10 +34,13 @@ import {
   LayoutGrid,
   Grid,
   List,
+  Globe,
+  Check,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { CartConfirmModal } from "@/components/CartConfirmModal";
 import { CheckoutDrawer } from "@/components/CheckoutDrawer";
+import { useCurrency } from "@/lib/currency";
 import { ReservationModal } from "@/components/ReservationModal";
 import { StockConflictAlert } from "@/components/StockConflictAlert";
 import { InvoiceModal } from "@/components/InvoiceModal";
@@ -194,6 +196,7 @@ function ProductCard({
   onAddToCart: (art: any) => void;
 }) {
   const variantes = art.variantes || [];
+  const { formatPrice } = useCurrency();
   const couleursArt = Array.from(
     new Set(variantes.map((v: any) => v.couleur).filter(Boolean)),
   ) as string[];
@@ -409,14 +412,14 @@ function ProductCard({
             {art.promotion_active && art.prix_promotionnel ? (
               <>
                 <span className="text-red-600">
-                  {formatCurrency(art.prix_promotionnel)}
+                  {formatPrice(art.prix_promotionnel)}
                 </span>{" "}
                 <span className="text-gray-400 line-through text-[11px]">
-                  {formatCurrency(art.prix_vente)}
+                  {formatPrice(art.prix_vente)}
                 </span>
               </>
             ) : (
-              formatCurrency(art.prix_vente)
+              formatPrice(art.prix_vente)
             )}
           </span>
           <button
@@ -438,8 +441,80 @@ function ProductCard({
 // ==========================================
 // COMPOSANT PAGE PRINCIPALE
 // ==========================================
+
+// ─── Sélecteur Pays / Devise ───────────────────────────────
+function CountrySelector() {
+  const { zones, selectedCountry, setSelectedCountry, selectedCurrency } =
+    useCurrency();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const flag = (code: string) =>
+    code === "FR" ? "🇫🇷" : code === "TN" ? "🇹🇳" : "🌍";
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-1.5 cursor-pointer hover:opacity-60 transition-opacity"
+        aria-label="Choisir le pays de livraison"
+      >
+        <Globe className="w-4 h-4 stroke-[1.2] text-black" />
+        <span className="text-[11px] font-medium uppercase tracking-wider hidden sm:block">
+          {selectedCurrency?.symbol}
+        </span>
+        <ChevronDown className="w-3 h-3 text-gray-400 hidden sm:block" />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-2 w-52 bg-white border border-gray-100 shadow-xl z-50">
+          <p className="px-4 py-2 text-[9px] uppercase tracking-[0.2em] text-gray-400 border-b border-gray-100">
+            Pays de livraison
+          </p>
+          {zones.length === 0 && (
+            <p className="px-4 py-3 text-[11px] text-gray-400">
+              Aucune zone configurée
+            </p>
+          )}
+          {zones.map((z) => (
+            <button
+              key={z.country_code}
+              onClick={() => {
+                setSelectedCountry(z.country_code);
+                setOpen(false);
+              }}
+              className={`w-full flex items-center justify-between px-4 py-2.5 text-xs hover:bg-gray-50 transition-colors ${
+                selectedCountry === z.country_code
+                  ? "font-semibold text-black"
+                  : "text-gray-600"
+              }`}
+            >
+              <span>
+                {flag(z.country_code)} {z.country_name}
+              </span>
+              <span className="text-gray-400 text-[10px] uppercase">
+                {z.currency_code}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ShopPage() {
   const qc = useQueryClient();
+  const { shippingFeeTnd } = useCurrency();
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
@@ -1237,10 +1312,9 @@ USING (true);
             "Veuillez remplir le Nom, Téléphone, Gouvernorat et Adresse de livraison.",
           );
         }
-        const SHIPPING_FEE = 8;
         const deliveryPayload: Record<string, any> = {
           items: cartItems,
-          total_price: cartTotal + SHIPPING_FEE,
+          total_price: cartTotal + shippingFeeTnd,
           client_firstname: customerData.prenom,
           client_lastname: customerData.nom,
           client_phone: customerData.telephone,
@@ -1248,7 +1322,7 @@ USING (true);
           client_address: customerData.address,
           client_city: customerData.city || undefined,
           client_governorate: customerData.governorate,
-          shipping_fees: SHIPPING_FEE,
+          shipping_fees: shippingFeeTnd,
           delivery_status: "prepared",
         };
         // Colonnes absentes de la table (avant migration SQL) : retry avec les colonnes existantes
@@ -1317,10 +1391,10 @@ USING (true);
           discountPercent: appliedDiscount > 0 ? appliedDiscount : undefined,
           discountCode: activePromoCode || undefined,
           shippingFees:
-            confirmMode === "delivery" ? 8 : undefined,
+            confirmMode === "delivery" ? shippingFeeTnd : undefined,
           total:
             cartTotal +
-            (confirmMode === "delivery" ? 8 : 0),
+            (confirmMode === "delivery" ? shippingFeeTnd : 0),
           isDelivery: confirmMode === "delivery",
         });
       }
@@ -1653,6 +1727,7 @@ USING (true);
           <div className="flex items-center gap-5 md:gap-7">
             <Search className="w-5 h-5 cursor-pointer stroke-[1.2] text-black hover:opacity-60 transition-opacity hidden md:block" />
             <User className="w-5 h-5 cursor-pointer stroke-[1.2] text-black hover:opacity-60 transition-opacity hidden md:block" />
+            <CountrySelector />
             <div
               className="relative cursor-pointer hover:opacity-60 transition-opacity"
               onClick={() => setShowFavoritesOnly((prev) => !prev)}

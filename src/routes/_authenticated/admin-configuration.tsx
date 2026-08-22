@@ -36,6 +36,8 @@ import {
   Palette,
   User,
   Camera,
+  Globe,
+  MapPin,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import { uploadAvatar } from "@/lib/upload-avatar.functions";
@@ -178,6 +180,9 @@ function AdminConfiguration() {
           <TabsTrigger value="monprofil" className="rounded-lg data-[state=active]:shadow-xs gap-2">
             <User className="h-4 w-4" /> Mon Profil
           </TabsTrigger>
+          <TabsTrigger value="shipping" className="rounded-lg data-[state=active]:shadow-xs gap-2">
+            <MapPin className="h-4 w-4" /> Livraison & Devises
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="banners">
@@ -194,6 +199,9 @@ function AdminConfiguration() {
         </TabsContent>
         <TabsContent value="monprofil">
           <MonProfilTab />
+        </TabsContent>
+        <TabsContent value="shipping">
+          <ShippingConfigTab />
         </TabsContent>
       </Tabs>
     </div>
@@ -1543,3 +1551,274 @@ function CardSection({ title, children }: { title: string; children: React.React
     </section>
   );
 }
+
+// ─── Livraison & Devises ──────────────────────────────────────
+
+function ShippingConfigTab() {
+  const qc = useQueryClient();
+  const { data: currencies = [], isLoading: loadCurrencies } = useQuery({
+    queryKey: ["admin-currencies"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("currencies")
+        .select("*")
+        .order("code");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const { data: zones = [], isLoading: loadZones } = useQuery({
+    queryKey: ["admin-shipping-zones"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("shipping_zones")
+        .select("*")
+        .order("country_code");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const [newZone, setNewZone] = useState({
+    country_code: "",
+    country_name: "",
+    currency_code: "TND",
+    shipping_fee: "",
+  });
+
+  const updateCurrencyRate = async (code: string, rate: number) => {
+    const { error } = await supabase
+      .from("currencies")
+      .update({ rate_to_tnd: rate })
+      .eq("code", code);
+    if (error) toast.error(error.message);
+    else {
+      toast.success(`Taux ${code} mis à jour`);
+      qc.invalidateQueries({ queryKey: ["admin-currencies"] });
+    }
+  };
+
+  const updateZoneFee = async (id: string, fee: number) => {
+    const { error } = await supabase
+      .from("shipping_zones")
+      .update({ shipping_fee: fee })
+      .eq("id", id);
+    if (error) toast.error(error.message);
+    else {
+      toast.success("Frais de livraison mis à jour");
+      qc.invalidateQueries({ queryKey: ["admin-shipping-zones"] });
+    }
+  };
+
+  const addZone = async () => {
+    if (!newZone.country_code.trim() || !newZone.country_name.trim()) {
+      toast.error("Code pays et nom requis");
+      return;
+    }
+    const { error } = await supabase.from("shipping_zones").insert([
+      {
+        country_code: newZone.country_code.toUpperCase().trim(),
+        country_name: newZone.country_name.trim(),
+        currency_code: newZone.currency_code,
+        shipping_fee: Number(newZone.shipping_fee) || 0,
+      },
+    ]);
+    if (error) toast.error(error.message);
+    else {
+      toast.success("Zone ajoutée");
+      setNewZone({
+        country_code: "",
+        country_name: "",
+        currency_code: "TND",
+        shipping_fee: "",
+      });
+      qc.invalidateQueries({ queryKey: ["admin-shipping-zones"] });
+    }
+  };
+
+  const deleteZone = async (id: string) => {
+    if (!confirm("Supprimer cette zone de livraison ?")) return;
+    const { error } = await supabase
+      .from("shipping_zones")
+      .delete()
+      .eq("id", id);
+    if (error) toast.error(error.message);
+    else {
+      toast.success("Zone supprimée");
+      qc.invalidateQueries({ queryKey: ["admin-shipping-zones"] });
+    }
+  };
+
+  if (loadCurrencies || loadZones) {
+    return (
+      <div className="py-10 text-center text-sm text-slate-400">
+        Chargement...
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* TAUX DE CHANGE */}
+      <CardSection title="Taux de change (1 TND = X)">
+        <div className="space-y-3">
+          {currencies.map((c: any) => (
+            <div
+              key={c.code}
+              className="flex flex-wrap items-center justify-between gap-3 border border-slate-100 rounded-xl px-4 py-3"
+            >
+              <div>
+                <p className="text-sm font-semibold text-[#091426]">
+                  {c.name}{" "}
+                  <span className="text-slate-400 font-normal">
+                    ({c.code} · {c.symbol})
+                  </span>
+                </p>
+                <p className="text-xs text-slate-500">
+                  Affichage : {c.locale}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Input
+                  key={c.code}
+                  defaultValue={Number(c.rate_to_tnd)}
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  className="w-28 h-9 text-sm rounded-lg"
+                  onBlur={(e) => {
+                    const v = Number(e.target.value);
+                    if (v > 0 && v !== Number(c.rate_to_tnd)) {
+                      updateCurrencyRate(c.code, v);
+                    }
+                  }}
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-9"
+                  onClick={() =>
+                    updateCurrencyRate(c.code, Number(c.rate_to_tnd))
+                  }
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+        <p className="mt-3 text-[11px] text-slate-400">
+          Les prix du catalogue sont stockés en TND. Le taux convertit les prix
+          dans la devise sélectionnée par le client.
+        </p>
+      </CardSection>
+
+      {/* ZONES DE LIVRAISON */}
+      <CardSection title="Frais de livraison par pays / zone">
+        <div className="space-y-3">
+          {zones.map((z: any) => (
+            <div
+              key={z.id}
+              className="flex flex-wrap items-center justify-between gap-3 border border-slate-100 rounded-xl px-4 py-3"
+            >
+              <div>
+                <p className="text-sm font-semibold text-[#091426]">
+                  {z.country_name}{" "}
+                  <span className="text-slate-400 font-normal">
+                    ({z.country_code} · {z.currency_code})
+                  </span>
+                </p>
+                <p className="text-xs text-slate-500">
+                  Devise affichée au client : {z.currency_code}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Input
+                  key={z.id}
+                  defaultValue={Number(z.shipping_fee)}
+                  type="number"
+                  step="0.001"
+                  min="0"
+                  className="w-28 h-9 text-sm rounded-lg"
+                  onBlur={(e) => {
+                    const v = Number(e.target.value);
+                    if (!isNaN(v) && v !== Number(z.shipping_fee)) {
+                      updateZoneFee(z.id, v);
+                    }
+                  }}
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-9 text-red-500 hover:text-red-600"
+                  onClick={() => deleteZone(z.id)}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* AJOUTER UNE ZONE */}
+        <div className="mt-5 border-t border-slate-100 pt-5">
+          <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-400">
+            Ajouter une zone
+          </h3>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+            <Input
+              placeholder="Code pays (FR)"
+              value={newZone.country_code}
+              onChange={(e) =>
+                setNewZone((p) => ({ ...p, country_code: e.target.value }))
+              }
+              className="h-9 rounded-lg"
+            />
+            <Input
+              placeholder="Nom (France)"
+              value={newZone.country_name}
+              onChange={(e) =>
+                setNewZone((p) => ({ ...p, country_name: e.target.value }))
+              }
+              className="h-9 rounded-lg"
+            />
+            <Select
+              value={newZone.currency_code}
+              onValueChange={(v) =>
+                setNewZone((p) => ({ ...p, currency_code: v }))
+              }
+            >
+              <SelectTrigger className="h-9 rounded-lg">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {currencies.map((c: any) => (
+                  <SelectItem key={c.code} value={c.code}>
+                    {c.code} · {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input
+              placeholder="Frais"
+              type="number"
+              step="0.001"
+              min="0"
+              value={newZone.shipping_fee}
+              onChange={(e) =>
+                setNewZone((p) => ({ ...p, shipping_fee: e.target.value }))
+              }
+              className="h-9 rounded-lg"
+            />
+            <Button className="h-9 gap-2" onClick={addZone}>
+              <Plus className="h-4 w-4" /> Ajouter
+            </Button>
+          </div>
+        </div>
+      </CardSection>
+    </div>
+  );
+}
+
+

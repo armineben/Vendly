@@ -3,7 +3,7 @@ import { X, Minus, Plus, Trash2, Check, Truck, CreditCard, Banknote, Ticket } fr
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { formatCurrency } from "@/lib/format";
+import { useCurrency } from "@/lib/currency";
 
 const GOUVERNORATS = [
   "Ariana", "Béja", "Ben Arous", "Bizerte", "Gabès", "Gafsa",
@@ -12,8 +12,6 @@ const GOUVERNORATS = [
   "Sfax", "Sidi Bouzid", "Siliana", "Sousse", "Tataouine",
   "Tozeur", "Tunis", "Zaghouan",
 ];
-
-const SHIPPING_FEE = 8; // 8,000 DT (livraison standard)
 
 interface CartItem {
   id: string;
@@ -68,9 +66,10 @@ export function CheckoutDrawer({
 }: CheckoutDrawerProps) {
   const [step, setStep] = useState<"panier" | "coord" | "confirmation">("coord");
   const [paymentMethod, setPaymentMethod] = useState<"cod" | "card">("cod");
-  const [deliveryMethod] = useState<"standard">("standard");
+  const { formatPrice, shippingFeeTnd, selectedZone, selectedCurrency } =
+    useCurrency();
 
-  const totalWithShipping = cartTotal + SHIPPING_FEE;
+  const totalWithShipping = cartTotal + shippingFeeTnd;
 
   const updateCustomer = (field: string, value: string) => {
     onCustomerDataChange({ ...customerData, [field]: value });
@@ -204,10 +203,14 @@ export function CheckoutDrawer({
                   <Truck className="w-5 h-5 text-gray-600" />
                   <div>
                     <p className="text-xs font-medium text-black">Livraison standard à domicile</p>
-                    <p className="text-[10px] text-gray-400">Sous 2 à 5 jours ouvrés</p>
+                    <p className="text-[10px] text-gray-400">
+                      {selectedZone?.country_name || "Tunisie"} · Sous 2 à 5 jours ouvrés
+                    </p>
                   </div>
                 </div>
-                <span className="text-xs font-bold">{formatCurrency(SHIPPING_FEE)}</span>
+                <span className="text-xs font-bold">
+                  {formatPrice(shippingFeeTnd)}
+                </span>
               </div>
             </section>
 
@@ -289,7 +292,7 @@ export function CheckoutDrawer({
                           </button>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-[11px] font-medium">{formatCurrency(item.prix_vente * item.quantite_selectionnee)}</span>
+                          <span className="text-[11px] font-medium">{formatPrice(item.prix_vente * item.quantite_selectionnee)}</span>
                           <button
                             onClick={() => onRemoveFromCart(item.variante_id)}
                             className="text-gray-300 hover:text-red-500 transition-colors"
@@ -324,7 +327,7 @@ export function CheckoutDrawer({
               {appliedDiscount > 0 && (
                 <div className="flex items-center justify-between text-[10px] text-red-600 bg-red-50 px-3 py-2">
                   <span>Code {activePromoCode} :</span>
-                  <span className="font-bold">-{formatCurrency(discountAmount)}</span>
+                  <span className="font-bold">-{formatPrice(discountAmount)}</span>
                 </div>
               )}
 
@@ -332,21 +335,21 @@ export function CheckoutDrawer({
               <div className="space-y-2 text-[11px] border-t border-gray-200 pt-4">
                 <div className="flex justify-between text-gray-500">
                   <span>Sous-total</span>
-                  <span>{formatCurrency(subTotal)}</span>
+                  <span>{formatPrice(subTotal)}</span>
                 </div>
                 <div className="flex justify-between text-gray-500">
                   <span>Livraison</span>
-                  <span>{formatCurrency(SHIPPING_FEE)}</span>
+                  <span>{formatPrice(shippingFeeTnd)}</span>
                 </div>
                 {appliedDiscount > 0 && (
                   <div className="flex justify-between text-red-600">
                     <span>Réduction ({activePromoCode})</span>
-                    <span>-{formatCurrency(discountAmount)}</span>
+                    <span>-{formatPrice(discountAmount)}</span>
                   </div>
                 )}
                 <div className="flex justify-between font-bold text-sm pt-2 border-t border-gray-200">
                   <span>Total à payer</span>
-                  <span>{formatCurrency(totalWithShipping)}</span>
+                  <span>{formatPrice(totalWithShipping)}</span>
                 </div>
                 <p className="text-[9px] text-gray-400 text-right">TVA incluse</p>
               </div>

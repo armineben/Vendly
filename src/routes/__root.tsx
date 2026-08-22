@@ -10,6 +10,7 @@ import {
 import appCss from "../styles.css?url";
 import { AuthProvider } from "@/hooks/use-auth";
 import { Toaster } from "@/components/ui/sonner";
+import { CurrencyProvider } from "@/lib/currency";
 
 const APP_MODE = (import.meta.env.VITE_APP_MODE || "client") as
   | "client"
@@ -120,8 +121,10 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <Outlet />
-        <Toaster richColors position="top-right" />
+        <CurrencyProvider>
+          <Outlet />
+          <Toaster richColors position="top-right" />
+        </CurrencyProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
