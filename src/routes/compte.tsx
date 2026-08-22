@@ -67,6 +67,7 @@ function AuthForm({
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
   const [rgpdAccepted, setRgpdAccepted] = useState(false);
+  const [newsletterOptIn, setNewsletterOptIn] = useState(false);
   const [pending, setPending] = useState(false);
 
   // Captcha simple (anti-robot)
@@ -181,9 +182,21 @@ function AuthForm({
       // silencieux — le profil est facultatif pour l'inscription
     }
 
+    // Inscription newsletter si la case est cochée
+    if (newsletterOptIn) {
+      const { error: nlError } = await supabase
+        .from("newsletter_subscribers")
+        .insert({ email });
+      if (nlError && nlError.code !== "23505") {
+        console.error("Erreur inscription newsletter:", nlError);
+      }
+    }
+
     setPending(false);
     toast.success(
-      "Compte créé ! Un email de confirmation vous a été envoyé.",
+      newsletterOptIn
+        ? "Compte créé ! Vous êtes inscrit à notre newsletter."
+        : "Compte créé ! Un email de confirmation vous a été envoyé.",
     );
     setMode("signin");
     setEmail("");
@@ -193,6 +206,7 @@ function AuthForm({
     setAddress("");
     setCity("");
     setRgpdAccepted(false);
+    setNewsletterOptIn(false);
   };
 
   return (
@@ -323,6 +337,20 @@ function AuthForm({
                 En créant un compte, vous acceptez que vos données
                 personnelles soient conservées pour le suivi de vos commandes
                 et de votre expérience client.
+              </span>
+            </label>
+
+            {/* NEWSLETTER OPT-IN */}
+            <label className="flex items-start gap-2.5 text-[11px] text-gray-500 leading-relaxed cursor-pointer">
+              <input
+                type="checkbox"
+                checked={newsletterOptIn}
+                onChange={(e) => setNewsletterOptIn(e.target.checked)}
+                className="mt-0.5 accent-black"
+              />
+              <span>
+                Je souhaite m'inscrire à la newsletter pour recevoir les
+                nouveautés et offres exclusives.
               </span>
             </label>
 
