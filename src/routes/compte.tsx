@@ -61,32 +61,138 @@ function AuthForm({
 }) {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
+  const [confirmEmail, setConfirmEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [phone, setPhone] = useState("+216");
+  const [address, setAddress] = useState("");
+  const [city, setCity] = useState("");
+  const [rgpdAccepted, setRgpdAccepted] = useState(false);
   const [pending, setPending] = useState(false);
+
+  // Captcha simple (anti-robot)
+  const [captchaA, setCaptchaA] = useState(0);
+  const [captchaB, setCaptchaB] = useState(0);
+  const [captchaAnswer, setCaptchaAnswer] = useState("");
+  const [captchaOk, setCaptchaOk] = useState(false);
+  useEffect(() => {
+    setCaptchaA(Math.floor(Math.random() * 8) + 2);
+    setCaptchaB(Math.floor(Math.random() * 8) + 2);
+    setCaptchaAnswer("");
+    setCaptchaOk(false);
+  }, [mode]);
+
+  const checkCaptcha = (value: string) => {
+    setCaptchaAnswer(value);
+    setCaptchaOk(Number(value) === captchaA + captchaB);
+  };
+
+  const handlePhoneChange = (value: string) => {
+    const cleaned = value.replace(/[^0-9+]/g, "");
+    if (!cleaned.startsWith("+216") && cleaned.length > 0) {
+      setPhone("+216" + cleaned.replace(/^\+?216/, ""));
+    } else {
+      setPhone(cleaned);
+    }
+  };
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (pending) return;
-    if (!email.includes("@") || password.length < 6) {
-      toast.error("Email invalide ou mot de passe trop court (6+ caractères).");
+
+    if (mode === "signin") {
+      if (!email.includes("@") || password.length < 6) {
+        toast.error("Email invalide ou mot de passe trop court.");
+        return;
+      }
+      setPending(true);
+      const { error } = await signIn(email, password);
+      setPending(false);
+      if (error) {
+        toast.error(error);
+        return;
+      }
+      toast.success("Bienvenue dans votre espace client !");
       return;
     }
+
+    // ── INSCRIPTION ──
+    if (!email.includes("@")) {
+      toast.error("Veuillez saisir une adresse email valide.");
+      return;
+    }
+    if (email !== confirmEmail) {
+      toast.error("Les adresses email ne correspondent pas.");
+      return;
+    }
+    if (password.length < 6) {
+      toast.error("Le mot de passe doit contenir au moins 6 caractères.");
+      return;
+    }
+    if (!phone || phone === "+216") {
+      toast.error("Veuillez saisir votre numéro de téléphone.");
+      return;
+    }
+    if (!rgpdAccepted) {
+      toast.error(
+        "Veuillez accepter la conservation de vos données personnelles.",
+      );
+      return;
+    }
+    if (!captchaOk) {
+      toast.error("Veuillez résoudre la vérification anti-robot.");
+      return;
+    }
+
     setPending(true);
-    const { error } =
-      mode === "signin"
-        ? await signIn(email, password)
-        : await signUp(email, password);
-    setPending(false);
+    const { error } = await signUp(email, password);
     if (error) {
+      setPending(false);
       toast.error(error);
       return;
     }
-    if (mode === "signin") {
-      toast.success("Bienvenue dans votre espace client !");
-    } else {
-      toast.success("Compte créé ! Vérifiez votre email si nécessaire.");
-      setMode("signin");
+
+    // Enregistrer les coordonnées client dans le profil
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const userId = session.session?.user?.id;
+      if (userId) {
+        const { data: existing } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("id", userId)
+          .maybeSingle();
+        if (existing) {
+          await supabase
+            .from("profiles")
+            .update({ phone, address, city })
+            .eq("id", userId);
+        } else {
+          await supabase.from("profiles").insert({
+            id: userId,
+            email,
+            display_name: email.split("@")[0],
+            phone,
+            address,
+            city,
+          });
+        }
+      }
+    } catch {
+      // silencieux — le profil est facultatif pour l'inscription
     }
+
+    setPending(false);
+    toast.success(
+      "Compte créé ! Un email de confirmation vous a été envoyé.",
+    );
+    setMode("signin");
+    setEmail("");
+    setConfirmEmail("");
+    setPassword("");
+    setPhone("+216");
+    setAddress("");
+    setCity("");
+    setRgpdAccepted(false);
   };
 
   return (
@@ -124,7 +230,7 @@ function AuthForm({
       <form onSubmit={onSubmit} className="space-y-5">
         <div className="space-y-2">
           <Label className="text-[10px] uppercase tracking-[0.1em] text-gray-500">
-            Adresse email
+            Adresse email *
           </Label>
           <Input
             type="email"
@@ -135,9 +241,26 @@ function AuthForm({
             className="h-11 rounded-none border-gray-200 focus-visible:ring-black"
           />
         </div>
+
+        {mode === "signup" && (
+          <div className="space-y-2">
+            <Label className="text-[10px] uppercase tracking-[0.1em] text-gray-500">
+              Confirmer l'adresse email *
+            </Label>
+            <Input
+              type="email"
+              value={confirmEmail}
+              onChange={(e) => setConfirmEmail(e.target.value)}
+              placeholder="client@exemple.com"
+              required
+              className="h-11 rounded-none border-gray-200 focus-visible:ring-black"
+            />
+          </div>
+        )}
+
         <div className="space-y-2">
           <Label className="text-[10px] uppercase tracking-[0.1em] text-gray-500">
-            Mot de passe
+            Mot de passe *
           </Label>
           <Input
             type="password"
@@ -148,6 +271,87 @@ function AuthForm({
             className="h-11 rounded-none border-gray-200 focus-visible:ring-black"
           />
         </div>
+
+        {mode === "signup" && (
+          <>
+            <div className="space-y-2">
+              <Label className="text-[10px] uppercase tracking-[0.1em] text-gray-500">
+                Numéro de téléphone *
+              </Label>
+              <Input
+                type="tel"
+                value={phone}
+                onChange={(e) => handlePhoneChange(e.target.value)}
+                placeholder="+216 XX XXX XXX"
+                className="h-11 rounded-none border-gray-200 focus-visible:ring-black"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] uppercase tracking-[0.1em] text-gray-500">
+                Adresse
+              </Label>
+              <Input
+                type="text"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="Rue, numéro, code postal"
+                className="h-11 rounded-none border-gray-200 focus-visible:ring-black"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] uppercase tracking-[0.1em] text-gray-500">
+                Ville
+              </Label>
+              <Input
+                type="text"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                placeholder="Votre ville"
+                className="h-11 rounded-none border-gray-200 focus-visible:ring-black"
+              />
+            </div>
+
+            {/* RGPD */}
+            <label className="flex items-start gap-2.5 text-[11px] text-gray-500 leading-relaxed cursor-pointer">
+              <input
+                type="checkbox"
+                checked={rgpdAccepted}
+                onChange={(e) => setRgpdAccepted(e.target.checked)}
+                className="mt-0.5 accent-black"
+              />
+              <span>
+                En créant un compte, vous acceptez que vos données
+                personnelles soient conservées pour le suivi de vos commandes
+                et de votre expérience client.
+              </span>
+            </label>
+
+            {/* Anti-robot */}
+            <div className="border border-gray-200 p-3.5">
+              <p className="text-[10px] uppercase tracking-[0.1em] text-gray-400 mb-2">
+                Vérification anti-robot
+              </p>
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-bold">
+                  {captchaA} + {captchaB} = ?
+                </span>
+                <Input
+                  type="number"
+                  value={captchaAnswer}
+                  onChange={(e) => checkCaptcha(e.target.value)}
+                  placeholder="?"
+                  className="h-10 w-20 rounded-none border-gray-200 text-center font-bold focus-visible:ring-black"
+                />
+                {captchaAnswer && (
+                  <span className={`text-xs font-bold ${captchaOk ? "text-emerald-600" : "text-red-500"}`}>
+                    {captchaOk ? "✓" : "✗"}
+                  </span>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
         <Button
           type="submit"
           disabled={pending}
