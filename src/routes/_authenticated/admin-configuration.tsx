@@ -43,6 +43,7 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import { uploadAvatar } from "@/lib/upload-avatar.functions";
+import { NewsletterBuilder } from "@/components/NewsletterBuilder";
 
 export const Route = createFileRoute("/_authenticated/admin-configuration")({
   component: AdminConfiguration,
@@ -1564,6 +1565,7 @@ function CardSection({ title, children }: { title: string; children: React.React
 
 function NewsletterTab() {
   const qc = useQueryClient();
+  const [view, setView] = useState<"abonnes" | "creer">("abonnes");
   const [search, setSearch] = useState("");
   const [exporting, setExporting] = useState(false);
 
@@ -1605,7 +1607,34 @@ function NewsletterTab() {
 
   return (
     <div className="space-y-6">
-      <CardSection title="Inscrits à la newsletter">
+      {/* SOUS-ONGLE : ABONNÉS / CRÉATION */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setView("abonnes")}
+          className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors ${
+            view === "abonnes"
+              ? "bg-black text-white"
+              : "bg-white border border-slate-200 text-slate-600 hover:border-slate-400"
+          }`}
+        >
+          Abonnés
+        </button>
+        <button
+          onClick={() => setView("creer")}
+          className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors ${
+            view === "creer"
+              ? "bg-black text-white"
+              : "bg-white border border-slate-200 text-slate-600 hover:border-slate-400"
+          }`}
+        >
+          Créer une newsletter
+        </button>
+      </div>
+
+      {view === "creer" ? (
+        <NewsletterBuilder />
+      ) : (
+        <CardSection title="Inscrits à la newsletter">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
           <p className="text-sm text-slate-600">
             <strong className="text-black">{subscribers.length}</strong>{" "}
@@ -1676,6 +1705,7 @@ function NewsletterTab() {
           </div>
         )}
       </CardSection>
+      )}
     </div>
   );
 }
