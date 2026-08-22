@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { ChevronDown } from "lucide-react";
 
 export interface MegaMenuColumn {
   heading: string;
@@ -139,6 +140,15 @@ export function MegaMenu({
     if (hoverTimeout.current) clearTimeout(hoverTimeout.current);
   };
 
+  const canHover =
+    typeof window !== "undefined" &&
+    window.matchMedia?.("(hover: hover)").matches;
+
+  const toggleDropdown = (id: string) => {
+    if (hoverTimeout.current) clearTimeout(hoverTimeout.current);
+    setActiveDropdown((prev) => (prev === id ? null : id));
+  };
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
@@ -196,17 +206,28 @@ export function MegaMenu({
           <div
             key={item.id}
             className="relative"
-            onMouseEnter={() => openDropdown(item.id)}
+            onMouseEnter={() => {
+              if (canHover) openDropdown(item.id);
+            }}
           >
-            <button
-              onClick={() => {
-                onSelectGenre(item.title);
-                setActiveDropdown(null);
-              }}
-              className={`text-[11px] font-medium uppercase tracking-[0.15em] transition-all pb-1 border-b-2 ${activeGenre === item.title ? "border-black text-black" : "border-transparent text-gray-400 hover:text-black"}`}
-            >
-              {item.title}
-            </button>
+            <div className="flex items-center gap-0.5">
+              <button
+                onClick={() => {
+                  onSelectGenre(item.title);
+                  setActiveDropdown(null);
+                }}
+                className={`text-[11px] font-medium uppercase tracking-[0.15em] transition-all pb-1 border-b-2 ${activeGenre === item.title ? "border-black text-black" : "border-transparent text-gray-400 hover:text-black"}`}
+              >
+                {item.title}
+              </button>
+              <button
+                onClick={() => toggleDropdown(item.id)}
+                aria-label={`Sous-catégories ${item.title}`}
+                className={`pb-1 transition-transform ${activeDropdown === item.id ? "rotate-180 text-black" : "text-gray-400 hover:text-black"} md:hidden`}
+              >
+                <ChevronDown className="w-3 h-3" />
+              </button>
+            </div>
           </div>
         ))}
 
@@ -215,7 +236,7 @@ export function MegaMenu({
 
       <div
         onMouseEnter={cancelHover}
-        className={`absolute left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-b border-zinc-100 shadow-lg transition-all duration-300 ease-out before:content-[''] before:absolute before:left-0 before:right-0 before:-top-8 before:h-8 ${activeDropdown ? "opacity-100 translate-y-0" : "opacity-0 translate-y-[-10px] pointer-events-none"}`}
+        className={`absolute left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-b border-zinc-100 shadow-lg transition-all duration-300 ease-out before:content-[''] before:absolute before:left-0 before:right-0 before:-top-8 before:h-8 max-h-[80vh] overflow-y-auto md:max-h-none md:overflow-visible ${activeDropdown ? "opacity-100 translate-y-0" : "opacity-0 translate-y-[-10px] pointer-events-none"}`}
       >
         {activeItem && (
           <div className="max-w-5xl mx-auto px-8 py-10">

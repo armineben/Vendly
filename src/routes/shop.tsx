@@ -315,10 +315,11 @@ function ProductCard({
 
         <button
           onClick={(e) => toggleFavorite(art.id, e)}
-          className="absolute top-3 right-3 p-2 z-10 hover:scale-110 transition-transform"
+          aria-label="Ajouter aux favoris"
+          className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-white/80 backdrop-blur flex items-center justify-center shadow-sm hover:bg-white hover:scale-110 transition-all"
         >
           <Heart
-            className={`w-5 h-5 transition-colors ${isFavorite ? "fill-red-500 text-red-500" : "text-black/70 stroke-[1.5] hover:text-red-400"}`}
+            className={`w-4 h-4 transition-colors ${isFavorite ? "fill-red-500 text-red-500" : "text-black/70 stroke-[1.5] hover:text-red-400"}`}
           />
         </button>
       </div>
@@ -1803,7 +1804,7 @@ USING (true);
         id="articles-section"
         className="max-w-[1800px] mx-auto px-6 md:px-12 pb-32"
       >
-        <div className="flex justify-between items-center mb-12 pb-4 border-b border-gray-200">
+        <div className="flex flex-col gap-3 mb-8 pb-4 border-b border-gray-200 sm:flex-row sm:justify-between sm:items-center sm:mb-12">
           <p className="text-[11px] font-light text-gray-500 uppercase tracking-[0.1em]">
             {filteredAndSortedArticles.length}{" "}
             {filteredAndSortedArticles.length > 1 ? "articles" : "article"}
@@ -1821,14 +1822,14 @@ USING (true);
               </span>
             )}
           </p>
-          <div className="flex gap-4 items-center">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             {(filterGenre || filterPromo || showFavoritesOnly) && (
               <button
                 onClick={() => {
                   clearAllFilters();
                   setShowFavoritesOnly(false);
                 }}
-                className="text-[11px] text-gray-400 hover:text-black uppercase tracking-[0.1em] underline underline-offset-4"
+                className="text-[11px] text-gray-400 hover:text-black uppercase tracking-[0.1em] underline underline-offset-4 whitespace-nowrap"
               >
                 {showFavoritesOnly ? "Voir tout" : "Réinitialiser les filtres"}
               </button>
@@ -1842,7 +1843,7 @@ USING (true);
               <option value="prix_asc">Prix Croissant</option>
               <option value="prix_desc">Prix Décroissant</option>
             </select>
-            <div className="flex items-center gap-1 border-l border-gray-200 pl-4">
+            <div className="flex items-center gap-1 sm:border-l sm:border-gray-200 sm:pl-4">
               <button
                 onClick={() => setViewMode("grid")}
                 title="Grille standard"
