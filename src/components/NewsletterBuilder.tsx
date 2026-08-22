@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatCurrency } from "@/lib/format";
+import { sendNewsletter } from "@/lib/send-newsletter.functions";
 import {
   Plus,
   Trash2,
@@ -17,6 +18,7 @@ import {
   Save,
   Search,
   GripVertical,
+  Send,
 } from "lucide-react";
 
 type Frame = "hero" | "duo" | "trio" | "magazine";
@@ -72,6 +74,8 @@ export function NewsletterBuilder() {
   const [searchTerm, setSearchTerm] = useState("");
   const [pickerFor, setPickerFor] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [subscriberCount, setSubscriberCount] = useState(0);
   const [savedList, setSavedList] = useState<NewsletterRow[]>([]);
   const pickerRef = useRef<HTMLDivElement>(null);
 
@@ -92,7 +96,15 @@ export function NewsletterBuilder() {
     };
     load();
     loadSaved();
+    loadSubscriberCount();
   }, []);
+
+  const loadSubscriberCount = async () => {
+    const { count, error } = await supabase
+      .from("newsletter_subscribers")
+      .select("*", { count: "exact", head: true });
+    if (!error && typeof count === "number") setSubscriberCount(count);
+  };
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -156,25 +168,57 @@ export function NewsletterBuilder() {
     setBlocks([]);
   };
 
-  const save = async () => {
+  const save = async (): Promise<string | null> => {
+    if (!subject.trim()) {
+      toast.error("Veuillez saisir un objet pour la newsletter.");
+      return null;
+    }
+    setSaving(true);
+    const { data, error } = await supabase
+      .from("newsletters")
+      .insert([{ subject: subject.trim(), content: blocks }])
+      .select("id")
+      .single();
+    setSaving(false);
+    if (error) {
+      toast.error(error.message || "Erreur lors de l'enregistrement.");
+      return null;
+    }
+    toast.success("Newsletter enregistrée !");
+    await loadSaved();
+    return data?.id ?? null;
+  };
+
+  const sendNow = async () => {
     if (!subject.trim()) {
       toast.error("Veuillez saisir un objet pour la newsletter.");
       return;
     }
-    setSaving(true);
-    const { error } = await supabase.from("newsletters").insert([
-      {
-        subject: subject.trim(),
-        content: blocks,
-      },
-    ]);
-    setSaving(false);
-    if (error) {
-      toast.error(error.message || "Erreur lors de l'enregistrement.");
+    if (blocks.length === 0) {
+      toast.error("Ajoutez au moins un bloc avant d'envoyer.");
       return;
     }
-    toast.success("Newsletter enregistrée !");
-    await loadSaved();
+    if (subscriberCount === 0) {
+      toast.warning("Aucun abonné à la newsletter pour le moment.");
+      return;
+    }
+    setSending(true);
+    try {
+      const newsletterId = await save();
+      if (!newsletterId) return;
+      const result = await sendNewsletter({
+        data: { newsletterId, subject: subject.trim(), content: blocks },
+      });
+      toast.success(
+        `Newsletter envoyée à ${result.sent} abonné${
+          result.sent > 1 ? "s" : ""
+        }${result.skipped > 0 ? ` · ${result.skipped} en échec` : ""}.`,
+      );
+    } catch (err: any) {
+      toast.error(err?.message || "Erreur lors de l'envoi.");
+    } finally {
+      setSending(false);
+    }
   };
 
   const deleteSaved = async (id: string) => {
@@ -388,13 +432,40 @@ export function NewsletterBuilder() {
 
         {/* ACTIONS */}
         <div className="flex gap-2">
-          <Button onClick={save} disabled={saving} className="flex-1">
+          <Button onClick={() => save()} disabled={saving} className="flex-1">
             <Save className="w-4 h-4 mr-2" />
             {saving ? "Enregistrement..." : "Enregistrer la newsletter"}
           </Button>
           <Button variant="outline" onClick={reset} className="text-slate-600">
             Réinitialiser
           </Button>
+        </div>
+
+        {/* ENVOI */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-bold text-[#091426]">
+                {subscriberCount} abonné{subscriberCount > 1 ? "s" : ""} prêt{subscriberCount > 1 ? "s" : ""} à recevoir la newsletter
+              </p>
+              <p className="text-xs text-slate-500 mt-1">
+                L'envoi concerne tous les e-mails de la table
+                newsletter_subscribers.
+              </p>
+            </div>
+            <Button
+              onClick={sendNow}
+              disabled={sending || subscriberCount === 0}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              <Send className="w-4 h-4 mr-2" />
+              {sending
+                ? "Envoi en cours..."
+                : subscriberCount === 0
+                  ? "Aucun abonné"
+                  : `Envoyer à ${subscriberCount} abonné${subscriberCount > 1 ? "s" : ""}`}
+            </Button>
+          </div>
         </div>
       </div>
 
