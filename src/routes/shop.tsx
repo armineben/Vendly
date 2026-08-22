@@ -166,8 +166,16 @@ function getDiscountPercent(a: any): number {
 function DiscountBadge({ percent }: { percent: number }) {
   if (percent <= 0) return null;
   return (
-    <span className="absolute top-3 left-3 z-10 bg-red-600 text-white text-xs font-bold px-2.5 py-1 uppercase rounded-sm">
+    <span className="bg-red-600 text-white text-[11px] font-bold px-2.5 py-1 uppercase rounded-sm">
       PROMO -{percent}%
+    </span>
+  );
+}
+
+function NewBadge() {
+  return (
+    <span className="bg-black text-white text-[11px] font-bold px-2.5 py-1 uppercase tracking-wider rounded-sm">
+      Nouveauté
     </span>
   );
 }
@@ -297,7 +305,10 @@ function ProductCard({
           </div>
         )}
 
-        <DiscountBadge percent={getDiscountPercent(art)} />
+        <div className="absolute top-3 left-3 z-10 flex flex-col items-start gap-1.5">
+          {art.is_new && <NewBadge />}
+          <DiscountBadge percent={getDiscountPercent(art)} />
+        </div>
 
         {itemImages.length > 1 && !hoveredColor && (
           <>
@@ -960,6 +971,17 @@ USING (true);
     return articlesAvecVariantes.filter(
       (art: any) =>
         art.promotion_active === true &&
+        art.archived !== true &&
+        art.status !== "archive" &&
+        art.status !== "supprime",
+    ).length;
+  }, [articlesAvecVariantes]);
+
+  // Compteur de nouveautés
+  const newCount = useMemo(() => {
+    return articlesAvecVariantes.filter(
+      (art: any) =>
+        art.is_new === true &&
         art.archived !== true &&
         art.status !== "archive" &&
         art.status !== "supprime",
@@ -1819,45 +1841,59 @@ USING (true);
         items={MEGA_MENU_ITEMS}
         activeGenre={filterGenre}
         activeSubCategory={filterSubCategory}
-        isAllActive={!filterGenre && !filterPromo}
+        isAllActive={!filterGenre && !filterPromo && !filterNew}
         saleCount={saleCount}
         isSaleActive={filterPromo}
+        isNewActive={filterNew}
+        newCount={newCount}
+        onSelectNew={() => {
+          setFilterNew(true);
+          setFilterGenre(null);
+          setFilterSubCategory(null);
+          setFilterPromo(false);
+        }}
         onSelectSale={() => {
           setFilterPromo(true);
           setFilterGenre(null);
           setFilterSubCategory(null);
+          setFilterNew(false);
         }}
         onSelectAll={() => {
           setFilterGenre(null);
           setFilterSubCategory(null);
           setFilterPromo(false);
+          setFilterNew(false);
         }}
         onSelectGenre={(genre) => {
           setFilterGenre(genre);
           setFilterSubCategory(null);
           setFilterPromo(false);
+          setFilterNew(false);
         }}
         onSelectSubCategory={(genre, subCategory) => {
           setFilterGenre(genre);
           setFilterSubCategory(subCategory);
           setFilterPromo(false);
+          setFilterNew(false);
         }}
       />
 
       <div className="py-10 text-center bg-white px-4">
-        {(filterGenre || filterSubCategory || filterPromo) ? (
+        {(filterGenre || filterSubCategory || filterPromo || filterNew) ? (
           <button
             onClick={clearAllFilters}
             title="Afficher tout le catalogue"
             className="text-2xl md:text-3xl font-serif uppercase tracking-[0.15em] font-medium text-black cursor-pointer hover:opacity-70 transition-opacity"
           >
-            {filterPromo
-              ? "Soldes"
-              : filterGenre
-                ? filterSubCategory
-                  ? `${filterGenre} > ${filterSubCategory}`
-                  : filterGenre
-                : heroTitle.default || "Collection Exclusive"}
+            {filterNew
+              ? "Nouveautés"
+              : filterPromo
+                ? "Soldes"
+                : filterGenre
+                  ? filterSubCategory
+                    ? `${filterGenre} > ${filterSubCategory}`
+                    : filterGenre
+                  : heroTitle.default || "Collection Exclusive"}
           </button>
         ) : (
           <h1 className="text-2xl md:text-3xl font-serif uppercase tracking-[0.15em] font-medium">
@@ -1905,9 +1941,15 @@ USING (true);
                 • Soldes
               </span>
             )}
+            {filterNew && (
+              <span className="text-black">
+                {" "}
+                • Nouveautés
+              </span>
+            )}
           </p>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            {(filterGenre || filterPromo || showFavoritesOnly) && (
+            {(filterGenre || filterPromo || filterNew || showFavoritesOnly) && (
               <button
                 onClick={() => {
                   clearAllFilters();
@@ -1976,9 +2018,11 @@ USING (true);
           <div className="text-center py-28 flex flex-col items-center gap-8">
             <div className="w-16 h-px bg-gray-200" />
             <p className="text-sm font-medium text-gray-500 uppercase tracking-[0.15em]">
-              {filterPromo
-                ? "Aucun article en solde pour le moment."
-                : "Aucun article dans cette catégorie pour le moment."}
+              {filterNew
+                ? "Aucune nouveauté pour le moment."
+                : filterPromo
+                  ? "Aucun article en solde pour le moment."
+                  : "Aucun article dans cette catégorie pour le moment."}
             </p>
             <button
               onClick={clearAllFilters}

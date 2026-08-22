@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Search, Download, Copy, Upload, Archive, User, Tag } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Download, Copy, Upload, Archive, User, Tag, Sparkles } from "lucide-react";
 import { ImportArticlesDialog } from "@/components/ImportArticlesDialog";
 import * as XLSX from "xlsx";
 import { supabase } from "@/integrations/supabase/client";
@@ -213,6 +213,33 @@ function StockPage() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const bulkSetNew = useMutation({
+    mutationFn: async ({
+      articleIds,
+      isNew,
+    }: {
+      articleIds: string[];
+      isNew: boolean;
+    }) => {
+      const { error } = await supabase
+        .from("articles")
+        .update({ is_new: isNew })
+        .in("id", articleIds);
+      if (error && error.code === "42703") {
+        throw new Error(
+          "Colonne is_new absente : exécutez la migration articles_is_new dans Supabase.",
+        );
+      }
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Statut Nouveau mis à jour");
+      setSelectedIds([]);
+      qc.invalidateQueries({ queryKey: ["raw-articles"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const updateQty = useMutation({
     mutationFn: async ({ row, quantite }: { row: any; quantite: number }) => {
       if (row.variante_id) {
@@ -264,6 +291,14 @@ function StockPage() {
     }
   };
 
+  const handleBulkNew = (isNew: boolean) => {
+    if (selectedIds.length === 0) return;
+    const distinctArticleIds = Array.from(
+      new Set(filtered.filter((row) => selectedIds.includes(row.unique_row_id)).map((row) => row.id))
+    );
+    bulkSetNew.mutate({ articleIds: distinctArticleIds, isNew });
+  };
+
   return (
     <div className="mx-auto max-w-7xl space-y-6 p-6 lg:p-10 bg-[#fbfbfa] min-h-screen">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -273,6 +308,24 @@ function StockPage() {
         </div>
         
         <div className="flex flex-wrap items-center gap-2">
+          {isAdmin && selectedIds.length > 0 && (
+            <>
+              <Button
+                variant="outline"
+                onClick={() => handleBulkNew(true)}
+                className="border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 text-xs font-bold shadow-sm transition-all"
+              >
+                <Sparkles className="mr-2 h-3.5 w-3.5" /> Nouveau ({selectedIds.length})
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => handleBulkNew(false)}
+                className="border-slate-200 text-slate-600 hover:bg-slate-100 text-xs font-bold shadow-sm transition-all"
+              >
+                <Sparkles className="mr-2 h-3.5 w-3.5 opacity-40" /> Retirer nouveau
+              </Button>
+            </>
+          )}
           {isAdmin && selectedIds.length > 0 && (
             <Button 
               variant="destructive" 

@@ -24,6 +24,9 @@ interface MegaMenuProps {
   saleCount?: number;
   isSaleActive?: boolean;
   onSelectSale?: () => void;
+  isNewActive?: boolean;
+  newCount?: number;
+  onSelectNew?: () => void;
 }
 
 export const MEGA_MENU_ITEMS: MegaMenuItem[] = [
@@ -121,6 +124,9 @@ export function MegaMenu({
   saleCount = 0,
   isSaleActive = false,
   onSelectSale,
+  isNewActive = false,
+  newCount = 0,
+  onSelectNew,
 }: MegaMenuProps) {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const hoverTimeout = useRef<ReturnType<typeof setTimeout>>(null);
@@ -185,6 +191,21 @@ export function MegaMenu({
           className={`text-[11px] font-medium uppercase tracking-[0.15em] transition-all pb-1 border-b-2 ${isAllActive ?? (!activeGenre && !isSaleActive) ? "border-black text-black" : "border-transparent text-gray-400 hover:text-black"}`}
         >
           Tout
+        </button>
+
+        <button
+          onClick={() => {
+            if (onSelectNew) onSelectNew();
+            setActiveDropdown(null);
+          }}
+          className={`text-[11px] font-semibold uppercase tracking-[0.15em] transition-all pb-1 border-b-2 ${isNewActive ? "border-black text-black" : "border-transparent text-gray-700 hover:text-black"}`}
+        >
+          Nouveautés
+          {newCount > 0 && (
+            <span className="ml-1 text-[10px] text-gray-400 font-bold">
+              ({newCount})
+            </span>
+          )}
         </button>
 
         <button
