@@ -24,6 +24,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useLowStockAlerts } from "@/hooks/use-low-stock-alerts";
 import { NotificationPopover } from "@/components/NotificationPopover";
 import { TeamChat } from "@/components/TeamChat";
+import { Logo } from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
 
 const APP_MODE = (import.meta.env.VITE_APP_MODE || "client") as
@@ -148,14 +149,10 @@ function AuthenticatedLayout() {
         {/* Left: logo + hamburger (mobile) */}
         <div className="flex items-center gap-3">
           <button onClick={() => setMenuOpen(true)} className="flex items-center gap-2 cursor-pointer lg:hidden">
-            <div className="w-8 h-8 rounded-xl overflow-hidden border border-zinc-200">
-              <img src="/logo-vendly.png" alt="Vendly" className="w-full h-full object-cover" />
-            </div>
+            <Logo size={32} className="rounded-xl border border-zinc-200" withRing={false} />
           </button>
           <Link to="/dashboard" className="hidden lg:flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl overflow-hidden border border-zinc-200">
-              <img src="/logo-vendly.png" alt="Vendly" className="w-full h-full object-cover" />
-            </div>
+            <Logo size={32} className="rounded-xl border border-zinc-200" withRing={false} />
             <span className="font-bold text-base tracking-tight text-zinc-800">Vendly</span>
           </Link>
         </div>
@@ -220,9 +217,7 @@ function AuthenticatedLayout() {
       <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
         <SheetContent side="left" className="w-72 p-0 bg-white border-r border-zinc-200 flex flex-col">
           <div className="flex items-center gap-3 border-b border-zinc-100 px-6 py-5">
-            <div className="w-10 h-10 rounded-xl overflow-hidden border border-zinc-200">
-              <img src="/logo-vendly.png" alt="Vendly" className="w-full h-full object-cover" />
-            </div>
+            <Logo size={40} className="rounded-xl border border-zinc-200" withRing={false} />
             <h2 className="font-bold text-lg tracking-tight text-zinc-800">Vendly</h2>
           </div>
           <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
