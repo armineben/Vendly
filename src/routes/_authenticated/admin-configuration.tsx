@@ -38,6 +38,8 @@ import {
   Camera,
   Globe,
   MapPin,
+  Mail,
+  Search,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import { uploadAvatar } from "@/lib/upload-avatar.functions";
@@ -183,6 +185,9 @@ function AdminConfiguration() {
           <TabsTrigger value="shipping" className="rounded-lg data-[state=active]:shadow-xs gap-2">
             <MapPin className="h-4 w-4" /> Livraison & Devises
           </TabsTrigger>
+          <TabsTrigger value="newsletter" className="rounded-lg data-[state=active]:shadow-xs gap-2">
+            <Mail className="h-4 w-4" /> Newsletter
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="banners">
@@ -202,6 +207,9 @@ function AdminConfiguration() {
         </TabsContent>
         <TabsContent value="shipping">
           <ShippingConfigTab />
+        </TabsContent>
+        <TabsContent value="newsletter">
+          <NewsletterTab />
         </TabsContent>
       </Tabs>
     </div>
@@ -1549,6 +1557,126 @@ function CardSection({ title, children }: { title: string; children: React.React
       </h2>
       {children}
     </section>
+);
+}
+
+// ─── Newsletter ──────────────────────────────────────────────
+
+function NewsletterTab() {
+  const qc = useQueryClient();
+  const [search, setSearch] = useState("");
+  const [exporting, setExporting] = useState(false);
+
+  const { data: subscribers = [], isLoading } = useQuery({
+    queryKey: ["newsletter-subscribers"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("newsletter_subscribers")
+        .select("id, email, created_at")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const filtered = search.trim()
+    ? subscribers.filter((s: any) =>
+        s.email.toLowerCase().includes(search.trim().toLowerCase()),
+      )
+    : subscribers;
+
+  const exportCsv = () => {
+    setExporting(true);
+    const header = "Email;Date d'inscription";
+    const rows = subscribers.map(
+      (s: any) =>
+        `${s.email};${new Date(s.created_at).toLocaleDateString("fr-FR")}`,
+    );
+    const csv = [header, ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `newsletter_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setExporting(false);
+  };
+
+  return (
+    <div className="space-y-6">
+      <CardSection title="Inscrits à la newsletter">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
+          <p className="text-sm text-slate-600">
+            <strong className="text-black">{subscribers.length}</strong>{" "}
+            inscrit{subscribers.length > 1 ? "s" : ""}
+          </p>
+          <div className="flex items-center gap-3">
+            {subscribers.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={exportCsv}
+                disabled={exporting}
+                className="text-xs"
+              >
+                Exporter CSV
+              </Button>
+            )}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Rechercher un email..."
+                className="pl-9 pr-3 py-2 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-black w-60"
+              />
+            </div>
+          </div>
+        </div>
+
+        {isLoading ? (
+          <div className="py-10 text-center text-sm text-slate-400">
+            Chargement...
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="py-10 text-center text-sm text-slate-400">
+            {search.trim()
+              ? "Aucun email trouvé."
+              : "Aucun inscrit pour le moment."}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                  <th className="pb-3 text-left">Email</th>
+                  <th className="pb-3 text-right">Date d'inscription</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((s: any) => (
+                  <tr
+                    key={s.id}
+                    className="border-b border-slate-100 hover:bg-slate-50"
+                  >
+                    <td className="py-3 text-sm text-slate-800">{s.email}</td>
+                    <td className="py-3 text-sm text-slate-500 text-right">
+                      {new Date(s.created_at).toLocaleDateString("fr-FR", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardSection>
+    </div>
   );
 }
 
@@ -1820,5 +1948,7 @@ function ShippingConfigTab() {
     </div>
   );
 }
+
+
 
 
