@@ -70,6 +70,21 @@ function GestionCataloguePage() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const toggleNew = useMutation({
+    mutationFn: async ({ id, isNew }: { id: string; isNew: boolean }) => {
+      const { error } = await supabase
+        .from("articles")
+        .update({ is_new: isNew })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Nouveauté mise à jour");
+      qc.invalidateQueries({ queryKey: ["articles-by-status"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const hardDelete = useMutation({
     mutationFn: async (ids: string[]) => {
       await supabase.from("sales").delete().in("article_id", ids);
@@ -339,15 +354,24 @@ function GestionCataloguePage() {
                   <td className="p-4">
                     <div className="font-medium">{a.designation}</div>
                     <div className="text-xs text-slate-400">{a.reference}</div>
-                    {a.promotion_active && (
-                      <div className="mt-1">
+                    <div className="mt-1.5 flex items-center gap-3">
+                      <button
+                        onClick={() => toggleNew.mutate({ id: a.id, isNew: !a.is_new })}
+                        className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full border transition-colors ${
+                          a.is_new
+                            ? "bg-indigo-50 text-indigo-700 border-indigo-200"
+                            : "bg-slate-50 text-slate-400 border-slate-200 hover:text-indigo-600"
+                        }`}
+                      >
+                        <span className={`w-2 h-2 rounded-full ${a.is_new ? "bg-indigo-500" : "bg-slate-300"}`} />
+                        {a.is_new ? "Nouveau ✓" : "Nouveau"}
+                      </button>
+                      {a.promotion_active && (
                         <span className="inline-block text-[10px] font-bold bg-red-100 text-red-600 px-1.5 py-0.5 rounded">
                           -{Math.round((1 - a.prix_promotionnel / a.prix_vente) * 100)}%
                         </span>
-                        <span className="ml-1.5 text-xs text-slate-400 line-through">{Number(a.prix_vente).toFixed(2)} DT</span>
-                        <span className="ml-1 text-xs font-bold text-red-600">{Number(a.prix_promotionnel).toFixed(2)} DT</span>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </td>
                   <td className="p-4 text-slate-600">{a.categorie || "—"}</td>
                   <td className="p-4 text-right">

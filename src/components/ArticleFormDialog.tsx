@@ -83,6 +83,7 @@ export function ArticleFormDialog({ open, onOpenChange, article }: { open: boole
   const [massUploading, setMassUploading] = useState(false);
   const [promotionActive, setPromotionActive] = useState(false);
   const [discountPercentage, setDiscountPercentage] = useState<number>(20);
+  const [isNew, setIsNew] = useState(false);
   const [colorGalleries, setColorGalleries] = useState<Record<string, { thumbnail_url: string; images: string[] }>>({});
   const [colorUploading, setColorUploading] = useState<string | null>(null);
   const [colorHexMap, setColorHexMap] = useState<Record<string, string>>({});
@@ -159,6 +160,7 @@ export function ArticleFormDialog({ open, onOpenChange, article }: { open: boole
         })();
 
         setPromotionActive(!!article.promotion_active);
+        setIsNew(!!article.is_new);
         if (article.promotion_active && article.prix_promotionnel && article.prix_vente > 0) {
           setDiscountPercentage(Math.round((1 - article.prix_promotionnel / article.prix_vente) * 100));
         } else {
@@ -174,6 +176,7 @@ export function ArticleFormDialog({ open, onOpenChange, article }: { open: boole
         setSubCategory("");
         setPromotionActive(false);
         setDiscountPercentage(20);
+        setIsNew(false);
         setColorGalleries({});
         setColorHexMap({});
         setColorHex2Map({});
@@ -353,7 +356,7 @@ export function ArticleFormDialog({ open, onOpenChange, article }: { open: boole
         ? Array.from(new Set([...allColorImages, ...(form.images || [])]))
         : form.images;
 
-      const payload = {
+      const basePayload = {
         reference: form.reference || `REF-${Date.now().toString(36).toUpperCase()}`,
         designation: form.designation,
         description: form.description,
@@ -365,17 +368,26 @@ export function ArticleFormDialog({ open, onOpenChange, article }: { open: boole
         images: finalImages,
         image: mainImage,
         promotion_active: promotionActive,
-        prix_promotionnel: promotionActive ? Number(form.prix_vente || 0) * (1 - discountPercentage / 100) : null
+        prix_promotionnel: promotionActive ? Number(form.prix_vente || 0) * (1 - discountPercentage / 100) : null,
       };
+      const payload = { ...basePayload, is_new: isNew };
+      const payloadLegacy = basePayload;
 
+      // Sauvegarde résiliente : si la colonne is_new n'existe pas encore (42703), on réessaie sans.
       if (articleId) {
-        const { error: errA } = await supabase.from("articles").update(payload).eq("id", articleId);
+        let { error: errA } = await supabase.from("articles").update(payload).eq("id", articleId);
+        if (errA && errA.code === "42703") {
+          ({ error: errA } = await supabase.from("articles").update(payloadLegacy).eq("id", articleId));
+        }
         if (errA) throw errA;
 
         const { error: errDelV } = await supabase.from("variantes").delete().eq("article_id", articleId);
         if (errDelV) throw errDelV;
       } else {
-        const { data: newArticle, error: errA } = await supabase.from("articles").insert([payload]).select("id").single();
+        let { data: newArticle, error: errA } = await supabase.from("articles").insert([payload]).select("id").single();
+        if (errA && errA.code === "42703") {
+          ({ data: newArticle, error: errA } = await supabase.from("articles").insert([payloadLegacy]).select("id").single());
+        }
         if (errA) throw errA;
         articleId = newArticle.id;
       }
@@ -546,6 +558,21 @@ export function ArticleFormDialog({ open, onOpenChange, article }: { open: boole
                     </div>
                   </div>
                 )}
+              </div>
+            </section>
+
+            {/* ─── NOUVEAU PRODUIT ─── */}
+            <section>
+              <div className="border border-indigo-100 rounded-xl p-4 bg-indigo-50/40">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="font-semibold text-indigo-800 text-sm">✨ Nouveau produit</Label>
+                    <p className="text-xs text-indigo-600/70">
+                      Afficher le badge « Nouveauté » en boutique
+                    </p>
+                  </div>
+                  <Switch checked={isNew} onCheckedChange={setIsNew} />
+                </div>
               </div>
             </section>
 

@@ -47,6 +47,18 @@ const DEFAULT_CURRENCY: Currency = {
   rate_to_tnd: 1,
 };
 
+const DEFAULT_CURRENCIES: Currency[] = [DEFAULT_CURRENCY];
+
+const DEFAULT_ZONES: ShippingZone[] = [
+  {
+    id: "default-tn",
+    country_code: "TN",
+    country_name: "Tunisie",
+    currency_code: "TND",
+    shipping_fee: 8,
+  },
+];
+
 export function CurrencyProvider({
   children,
 }: {
@@ -66,20 +78,28 @@ export function CurrencyProvider({
 
   useEffect(() => {
     const load = async () => {
+      // Valeurs par défaut si les tables n'existent pas encore (migration en attente)
+      let nextCurrencies = DEFAULT_CURRENCIES;
+      let nextZones = DEFAULT_ZONES;
       try {
         const [curRes, zoneRes] = await Promise.all([
           supabase.from("currencies").select("*").eq("is_active", true),
           supabase.from("shipping_zones").select("*").eq("is_active", true),
         ]);
-        if (curRes.error) throw curRes.error;
-        if (zoneRes.error) throw zoneRes.error;
-        setCurrencies(curRes.data ?? []);
-        setZones(zoneRes.data ?? []);
+        if (!curRes.error && Array.isArray(curRes.data) && curRes.data.length > 0) {
+          nextCurrencies = curRes.data;
+        }
+        if (!zoneRes.error && Array.isArray(zoneRes.data) && zoneRes.data.length > 0) {
+          nextZones = zoneRes.data;
+        }
       } catch (e) {
-        console.error("Erreur chargement devises/zones:", e);
-      } finally {
-        setLoading(false);
+        console.warn(
+          "Tables currencies/shipping_zones indisponibles — valeurs par défaut utilisées. Lancez la migration SQL.",
+        );
       }
+      setCurrencies(nextCurrencies);
+      setZones(nextZones);
+      setLoading(false);
     };
     load();
   }, []);

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
@@ -730,6 +730,7 @@ function ShopPage() {
   );
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [filterPromo, setFilterPromo] = useState(false);
+  const [filterNew, setFilterNew] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "compact" | "list">("grid");
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
@@ -975,6 +976,7 @@ USING (true);
     setFilterGenre(null);
     setFilterSubCategory(null);
     setFilterPromo(false);
+    setFilterNew(false);
     setIsMenuOpen(false);
   };
 
@@ -1011,6 +1013,12 @@ USING (true);
         // Filter promo
         if (filterPromo && !art.promotion_active) {
           console.log("Filtered out (not promo):", art.designation);
+          return false;
+        }
+
+        // Filter nouveautés
+        if (filterNew && !art.is_new) {
+          console.log("Filtered out (not new):", art.designation);
           return false;
         }
 
@@ -1058,6 +1066,7 @@ USING (true);
     filterGenre,
     filterSubCategory,
     filterPromo,
+    filterNew,
     sortBy,
     showFavoritesOnly,
     favorites,
