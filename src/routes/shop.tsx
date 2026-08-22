@@ -742,6 +742,9 @@ function ShopPage() {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [filterPromo, setFilterPromo] = useState(false);
   const [filterNew, setFilterNew] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "compact" | "list">("grid");
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
@@ -1044,6 +1047,21 @@ USING (true);
           return false;
         }
 
+        // Recherche libre
+        if (searchQuery.trim()) {
+          const q = searchQuery.trim().toLowerCase();
+          const hay = [
+            art.designation,
+            art.reference,
+            art.categorie,
+            art.description,
+          ]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+
         // Filter by category (temporarily disabled for testing)
         if (filterGenre || filterSubCategory) {
           const matches = categoryMatchesFilter(
@@ -1089,6 +1107,7 @@ USING (true);
     filterSubCategory,
     filterPromo,
     filterNew,
+    searchQuery,
     sortBy,
     showFavoritesOnly,
     favorites,
@@ -1756,8 +1775,20 @@ USING (true);
           </div>
 
           <div className="flex items-center gap-5 md:gap-7">
-            <Search className="w-5 h-5 cursor-pointer stroke-[1.2] text-black hover:opacity-60 transition-opacity hidden md:block" />
-            <User className="w-5 h-5 cursor-pointer stroke-[1.2] text-black hover:opacity-60 transition-opacity hidden md:block" />
+            <button
+              onClick={() => setIsSearchOpen((o) => !o)}
+              aria-label="Rechercher"
+              className="hidden md:block cursor-pointer hover:opacity-60 transition-opacity"
+            >
+              <Search className="w-5 h-5 stroke-[1.2] text-black" />
+            </button>
+            <button
+              onClick={() => setIsAccountOpen((o) => !o)}
+              aria-label="Mon compte"
+              className="hidden md:block cursor-pointer hover:opacity-60 transition-opacity"
+            >
+              <User className="w-5 h-5 stroke-[1.2] text-black" />
+            </button>
             <CountrySelector />
             <div
               className="relative cursor-pointer hover:opacity-60 transition-opacity"
@@ -1788,6 +1819,44 @@ USING (true);
           </div>
         </div>
       </header>
+
+      {/* PANEL RECHERCHE */}
+      {isSearchOpen && (
+        <div className="border-b border-gray-100 bg-white px-6 md:px-12 py-4">
+          <div className="max-w-[1800px] mx-auto flex items-center gap-3">
+            <Search className="w-4 h-4 text-gray-400 shrink-0" />
+            <input
+              autoFocus
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Rechercher un article, une référence, une catégorie..."
+              className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-300 border-b border-gray-200 pb-2 focus:border-black transition-colors"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="text-[11px] uppercase tracking-widest text-gray-400 hover:text-black"
+              >
+                Effacer
+              </button>
+            )}
+            <button
+              onClick={() => setIsSearchOpen(false)}
+              aria-label="Fermer la recherche"
+              className="p-1 hover:opacity-60 transition-opacity"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          {searchQuery.trim() && (
+            <div className="max-w-[1800px] mx-auto mt-2 text-[11px] text-gray-400 uppercase tracking-widest">
+              {filteredAndSortedArticles.length} résultat
+              {filteredAndSortedArticles.length > 1 ? "s" : ""}
+            </div>
+          )}
+        </div>
+      )}
 
       <AnnouncementBanner />
 
@@ -2224,6 +2293,51 @@ USING (true);
         onClose={() => setInvoiceData(null)}
         data={invoiceData}
       />
+
+      {/* MODALE COMPTE CLIENT */}
+      {isAccountOpen && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/20 backdrop-blur-sm flex items-start justify-center pt-32"
+          onClick={() => setIsAccountOpen(false)}
+        >
+          <div
+            className="bg-white w-full max-w-md border border-gray-100 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="text-sm font-bold uppercase tracking-[0.15em]">
+                Mon compte
+              </h2>
+              <button
+                onClick={() => setIsAccountOpen(false)}
+                className="p-1 hover:opacity-60 transition-opacity"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="px-8 py-8 space-y-4">
+              <Link
+                to="/login"
+                className="block w-full text-center bg-black text-white py-3 text-xs font-bold uppercase tracking-[0.2em] hover:bg-gray-800 transition-colors"
+                onClick={() => setIsAccountOpen(false)}
+              >
+                Se connecter
+              </Link>
+              <Link
+                to="/login"
+                className="block w-full text-center border border-gray-300 text-black py-3 text-xs font-bold uppercase tracking-[0.2em] hover:bg-gray-50 transition-colors"
+                onClick={() => setIsAccountOpen(false)}
+              >
+                Créer un compte
+              </Link>
+              <p className="text-[11px] text-gray-400 text-center leading-relaxed">
+                Connectez-vous pour suivre vos commandes, gérer vos favoris et
+                bénéficier d'une expérience personnalisée.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
