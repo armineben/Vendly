@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, type FormEvent, useMemo } from "react";
+import { useState, type FormEvent, useMemo, useEffect } from "react";
 import { toast } from "sonner";
-import { Plus, ShoppingBag, XCircle, Filter, ArrowRightLeft } from "lucide-react";
+import { Plus, ShoppingBag, XCircle, Filter, ArrowRightLeft, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { formatCurrency, formatDateTime } from "@/lib/format";
+import { checkExpiredReservations } from "@/lib/reservation-emails.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,7 +42,7 @@ function getImageUrl(r: any): string | null {
 
 function getExpirationInfo(r: any): { label: string; urgent: boolean; expiree: boolean } {
   const now = Date.now();
-  const exp = new Date(r.expiration_date).getTime();
+  const exp = new Date(r.date_expiration).getTime();
   const diff = exp - now;
   if (diff <= 0) return { label: "Expirée", urgent: false, expiree: true };
   const hours = Math.floor(diff / 3600000);
@@ -54,6 +55,20 @@ function getExpirationInfo(r: any): { label: string; urgent: boolean; expiree: b
 function ReservationsPage() {
   const { user, isAdmin } = useAuth();
   const qc = useQueryClient();
+
+  // Vérification des réservations expirées à l'ouverture (admin)
+  useEffect(() => {
+    if (!isAdmin) return;
+    checkExpiredReservations()
+      .then((r) => {
+        if (r.expired > 0) {
+          toast.info(
+            `${r.expired} réservation(s) expirée(s) : ${r.emailed} e-mail(s) de relance envoyé(s).`,
+          );
+        }
+      })
+      .catch(() => {});
+  }, [isAdmin]);
 
   const [showForm, setShowForm] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -102,7 +117,7 @@ function ReservationsPage() {
         client_name: clientName,
         client_phone: clientPhone,
         duree_heures: Number(dureeReservation),
-        expiration_date: calcExpiration(),
+        date_expiration: calcExpiration(),
         status: "actif",
         created_by: user?.id,
       });
@@ -291,7 +306,7 @@ function ReservationsPage() {
                     {isAdmin && <td className="px-4 py-3 text-muted-foreground text-xs">{r.profiles?.display_name || "—"}</td>}
                     <td className="px-4 py-3">
                       <span className={`text-xs whitespace-nowrap ${expInfo.expiree ? "text-red-500 line-through" : expInfo.urgent ? "text-amber-600 font-semibold" : "text-muted-foreground"}`}>
-                        {formatDateTime(r.expiration_date)}
+                        {formatDateTime(r.date_expiration)}
                       </span>
                     </td>
                     <td className="px-4 py-3">

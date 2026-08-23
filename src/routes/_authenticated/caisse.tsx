@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatCurrency } from "@/lib/format";
 import { sendInvoice } from "@/lib/send-invoice.functions";
+import { sendReservationConfirmation } from "@/lib/reservation-emails.functions";
 import {
   Search,
   Plus,
@@ -24,6 +25,7 @@ import {
   Mail,
   CalendarPlus,
   Check,
+  X,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/caisse")({
@@ -64,6 +66,15 @@ function CaissePage() {
   const [saleResult, setSaleResult] = useState<any>(null);
   const [invoiceEmail, setInvoiceEmail] = useState("");
   const [emailSending, setEmailSending] = useState(false);
+  // Modale réservation
+  const [resOpen, setResOpen] = useState(false);
+  const [resNom, setResNom] = useState("");
+  const [resPrenom, setResPrenom] = useState("");
+  const [resTel, setResTel] = useState("+216");
+  const [resEmail, setResEmail] = useState("");
+  const [resAcompte, setResAcompte] = useState("");
+  const [resDelay, setResDelay] = useState<"jour" | "24h" | "48h" | "72h">("24h");
+  const [resSubmitting, setResSubmitting] = useState(false);
 
   const { data: articles = [], isLoading } = useQuery({
     queryKey: ["pos-articles"],
@@ -335,34 +346,84 @@ function CaissePage() {
     }
   };
 
-  // Réservation : bascule vers le module de réservation
-  const reserve = async () => {
+  // Réservation : ouvre la modale client
+  const reserve = () => {
     if (cart.length === 0) {
       toast.error("Le panier est vide");
       return;
     }
-    setSubmitting(true);
+    setResOpen(true);
+  };
+
+  const submitReservation = async () => {
+    if (!resNom.trim() || !resPrenom.trim()) {
+      toast.error("Veuillez saisir le nom et le prénom du client.");
+      return;
+    }
+    if (!resEmail || !resEmail.includes("@")) {
+      toast.error("Veuillez saisir une adresse email valide.");
+      return;
+    }
+    setResSubmitting(true);
     try {
+      const heures =
+        resDelay === "jour" ? 4 : resDelay === "24h" ? 24 : resDelay === "48h" ? 48 : 72;
+      const expiresAt = new Date(Date.now() + heures * 3600 * 1000);
+      const acompte = Number(resAcompte) || 0;
+
       const { error } = await supabase.from("reservations").insert([
         {
-          nom: "Caisse",
-          prenom: "",
-          telephone: "",
+          nom: resNom.trim(),
+          prenom: resPrenom.trim(),
+          telephone: resTel,
+          email: resEmail.trim(),
+          acompte,
           items: buildItemsPayload(),
-          date_expiration: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
+          date_expiration: expiresAt.toISOString(),
+          duree_heures: heures,
+          delay_type: resDelay,
           statut: "en_attente",
         },
       ]);
       if (error) throw error;
-      toast.success("Réservation créée");
+
+      // Email de confirmation
+      try {
+        await sendReservationConfirmation({
+          data: {
+            email: resEmail.trim(),
+            nom: resNom.trim(),
+            prenom: resPrenom.trim(),
+            telephone: resTel,
+            acompte,
+            dateExpiration: expiresAt.toISOString(),
+            items: cart.map((i) => ({
+              designation: i.designation,
+              quantite: i.qty,
+              prix_unitaire: effPrice(i),
+            })),
+          },
+        });
+      } catch {
+        toast.warning("Réservation créée mais l'email n'a pas pu être envoyé.");
+      }
+
+      toast.success("Réservation créée ! Confirmation envoyée par email.");
       setCart([]);
+      setResOpen(false);
+      setResNom("");
+      setResPrenom("");
+      setResTel("+216");
+      setResEmail("");
+      setResAcompte("");
+      setResDelay("24h");
       qc.invalidateQueries({ queryKey: ["pos-articles"] });
       qc.invalidateQueries({ queryKey: ["pos-variantes"] });
       navigate({ to: "/reservations" });
     } catch (e: any) {
       toast.error(e.message || "Erreur lors de la réservation");
     } finally {
-      setSubmitting(false);
+      setResSubmitting(false);
     }
   };
 
@@ -689,6 +750,72 @@ function CaissePage() {
           </div>
         </div>
       </div>
+
+      {/* ─── MODALE RÉSERVATION ─── */}
+      {resOpen && (
+        <div className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-start justify-center overflow-y-auto p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl p-6 my-8">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-bold text-[#091426]">Réservation</h2>
+              <button onClick={() => setResOpen(false)} className="text-slate-400 hover:text-black"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-[10px] uppercase tracking-wider text-slate-400">Prénom *</Label>
+                  <Input value={resPrenom} onChange={(e) => setResPrenom(e.target.value)} placeholder="Prénom" className="h-9 text-xs rounded-lg mt-1" />
+                </div>
+                <div>
+                  <Label className="text-[10px] uppercase tracking-wider text-slate-400">Nom *</Label>
+                  <Input value={resNom} onChange={(e) => setResNom(e.target.value)} placeholder="Nom" className="h-9 text-xs rounded-lg mt-1" />
+                </div>
+              </div>
+              <div>
+                <Label className="text-[10px] uppercase tracking-wider text-slate-400">Téléphone</Label>
+                <Input value={resTel} onChange={(e) => setResTel(e.target.value)} className="h-9 text-xs rounded-lg mt-1" />
+              </div>
+              <div>
+                <Label className="text-[10px] uppercase tracking-wider text-slate-400">Adresse e-mail *</Label>
+                <Input type="email" value={resEmail} onChange={(e) => setResEmail(e.target.value)} placeholder="client@exemple.com" className="h-9 text-xs rounded-lg mt-1" />
+              </div>
+              <div>
+                <Label className="text-[10px] uppercase tracking-wider text-slate-400">Acompte versé (DT)</Label>
+                <Input type="number" min="0" value={resAcompte} onChange={(e) => setResAcompte(e.target.value)} placeholder="0" className="h-9 text-xs rounded-lg mt-1" />
+              </div>
+              <div>
+                <Label className="text-[10px] uppercase tracking-wider text-slate-400">Durée de la réservation</Label>
+                <div className="grid grid-cols-4 gap-2 mt-1">
+                  {(["jour", "24h", "48h", "72h"] as const).map((d) => (
+                    <button
+                      key={d}
+                      onClick={() => setResDelay(d)}
+                      className={`px-2 py-2 rounded-lg border text-[11px] font-semibold transition-colors ${resDelay === d ? "border-black bg-black text-white" : "border-slate-200 text-slate-600"}`}
+                    >
+                      {d === "jour" ? "Jour même" : d}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Expiration :{" "}
+                  {new Date(
+                    Date.now() +
+                      (resDelay === "jour" ? 4 : resDelay === "24h" ? 24 : resDelay === "48h" ? 48 : 72) *
+                        3600 *
+                        1000,
+                  ).toLocaleString("fr-FR")}
+                </p>
+              </div>
+              <div className="flex gap-2 pt-2">
+                <Button variant="outline" className="flex-1 h-10 text-xs" onClick={() => setResOpen(false)}>Annuler</Button>
+                <Button onClick={submitReservation} disabled={resSubmitting} className="flex-1 h-10 text-xs font-bold">
+                  <CalendarPlus className="w-4 h-4 mr-2" />
+                  {resSubmitting ? "..." : "Confirmer la réservation"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ─── MODALE FACTURE ─── */}
       {saleResult && (
