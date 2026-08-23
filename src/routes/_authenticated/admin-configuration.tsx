@@ -230,7 +230,7 @@ async function uploadVideo(
   if (onProgress) onProgress(5);
 
   const { error: uploadError } = await supabase.storage
-    .from("site-assets")
+    .from("banners")
     .upload(path, file, {
       cacheControl: "3600",
       upsert: false,
@@ -240,7 +240,7 @@ async function uploadVideo(
   if (onProgress) onProgress(80);
 
   const { data: pubData } = supabase.storage
-    .from("site-assets")
+    .from("banners")
     .getPublicUrl(path);
 
   if (onProgress) onProgress(100);
@@ -280,7 +280,7 @@ function VideoUploader({
       const msg =
         err?.message?.includes("bucket") ||
         err?.message?.includes("404")
-          ? 'Bucket "site-assets" introuvable. Créez-le dans Supabase Storage.'
+          ? 'Bucket "banners" introuvable. Créez-le dans Supabase Storage.'
           : err.message || "Erreur lors du téléversement";
       toast.error(msg);
     } finally {
