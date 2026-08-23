@@ -366,20 +366,33 @@ function CaissePage() {
       const expiresAt = new Date(Date.now() + heures * 3600 * 1000);
       const acompte = Number(resAcompte) || 0;
 
-      const { error } = await supabase.from("reservations").insert([
-        {
-          nom: resNom.trim(),
-          prenom: resPrenom.trim(),
-          telephone: resTel,
-          email: resEmail.trim(),
-          acompte,
-          items: buildItemsPayload(),
-          date_expiration: expiresAt.toISOString(),
-          duree_heures: heures,
-          delay_type: resDelay,
-          statut: "en_attente",
-        },
-      ]);
+      const basePayload = {
+        nom: resNom.trim(),
+        prenom: resPrenom.trim(),
+        telephone: resTel,
+        email: resEmail.trim(),
+        acompte,
+        items: buildItemsPayload(),
+        date_expiration: expiresAt.toISOString(),
+        duree_heures: heures,
+        delay_type: resDelay,
+        statut: "en_attente",
+      };
+
+      // Insertion résiliente : si contrainte NOT NULL sur colonnes héritées,
+      // on complète avec les valeurs de repli et on réessaie.
+      let { error } = await supabase.from("reservations").insert([basePayload]);
+      if (error && error.code === "23502") {
+        ({ error } = await supabase.from("reservations").insert([
+          {
+            ...basePayload,
+            client_name: `${resPrenom.trim()} ${resNom.trim()}`.trim(),
+            client_phone: resTel,
+            status: "actif",
+            expiration_date: expiresAt.toISOString(),
+          },
+        ]));
+      }
       if (error) throw error;
 
       // Email de confirmation

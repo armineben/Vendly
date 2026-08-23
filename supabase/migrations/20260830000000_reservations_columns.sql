@@ -25,6 +25,42 @@ BEGIN
   END IF;
 END $$;
 
+-- Rendre nullable les colonnes héritées (client_name, client_phone, status, expiration_date, created_by)
+-- pour ne plus violer NOT NULL lors de l'insertion depuis la caisse (panier global items)
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'reservations' AND column_name = 'client_name'
+  ) THEN
+    ALTER TABLE public.reservations ALTER COLUMN client_name DROP NOT NULL;
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'reservations' AND column_name = 'client_phone'
+  ) THEN
+    ALTER TABLE public.reservations ALTER COLUMN client_phone DROP NOT NULL;
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'reservations' AND column_name = 'status'
+  ) THEN
+    ALTER TABLE public.reservations ALTER COLUMN status DROP NOT NULL;
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'reservations' AND column_name = 'expiration_date'
+  ) THEN
+    ALTER TABLE public.reservations ALTER COLUMN expiration_date DROP NOT NULL;
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'reservations' AND column_name = 'created_by'
+  ) THEN
+    ALTER TABLE public.reservations ALTER COLUMN created_by DROP NOT NULL;
+  END IF;
+END $$;
+
 -- Forcer le rechargement du schéma PostgREST (élimine l'erreur de cache)
 NOTIFY pgrst, 'reload schema';
 
