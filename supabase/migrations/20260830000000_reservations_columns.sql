@@ -14,6 +14,17 @@ ALTER TABLE public.reservations
   ADD COLUMN IF NOT EXISTS delay_type TEXT DEFAULT '24h',
   ADD COLUMN IF NOT EXISTS statut TEXT DEFAULT 'en_attente';
 
+-- Rendre article_id optionnel (nullable) pour ne plus bloquer les réservations à panier global (items)
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'reservations' AND column_name = 'article_id'
+  ) THEN
+    ALTER TABLE public.reservations ALTER COLUMN article_id DROP NOT NULL;
+  END IF;
+END $$;
+
 -- Forcer le rechargement du schéma PostgREST (élimine l'erreur de cache)
 NOTIFY pgrst, 'reload schema';
 
