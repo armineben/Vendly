@@ -1412,6 +1412,31 @@ USING (true);
           throw error;
         };
         await insertDelivery(deliveryPayload);
+
+        // Synchronisation Client ➔ Admin : enregistrer aussi dans sales (page Ventes)
+        const saleItems = cart.map((item) => ({
+          article_id: item.id,
+          variante_id: item.variante_id,
+          quantite: item.quantite_selectionnee,
+          designation: item.designation,
+          prix_unitaire: item.prix_vente,
+          taille: item.taille_selectionnee,
+          couleur: item.couleur_selectionnee,
+        }));
+        const { error: saleError } = await supabase.from("sales").insert([
+          {
+            items: saleItems,
+            total: cartTotal + shippingFeeTnd,
+            customer_name:
+              `${customerData.prenom} ${customerData.nom}`.trim() ||
+              "Client boutique",
+            customer_phone: customerData.telephone || "",
+            payment_method: customerData.paymentMethod || "cod",
+            statut: "validee",
+          },
+        ]);
+        if (saleError && saleError.code !== "42703") throw saleError;
+
         await decrementStock();
       } else {
         const { error: resError } = await supabase.from("reservations").insert([
