@@ -26,6 +26,7 @@ import {
   CalendarPlus,
   Check,
   X,
+  PauseCircle,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/caisse")({
@@ -56,6 +57,7 @@ function CaissePage() {
   const [ticketNumber, setTicketNumber] = useState(() =>
     `TICKET-${Date.now().toString(36).toUpperCase()}${Math.floor(Math.random() * 90 + 10)}`,
   );
+  const [pendingCarts, setPendingCarts] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -121,6 +123,67 @@ function CaissePage() {
     } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoading, articles.length]);
+
+  // Charger les paniers en attente
+  const loadPendingCarts = async () => {
+    const { data } = await supabase
+      .from("pending_carts")
+      .select("*")
+      .order("created_at", { ascending: false });
+    setPendingCarts(data ?? []);
+  };
+  useEffect(() => {
+    loadPendingCarts();
+  }, []);
+
+  const holdCart = async () => {
+    if (cart.length === 0) {
+      toast.error("Le panier est vide.");
+      return;
+    }
+    try {
+      const { error } = await supabase.from("pending_carts").insert([
+        {
+          ticket_number: ticketNumber,
+          items: cart,
+          total,
+        },
+      ]);
+      if (error) throw error;
+      toast.success(`Panier ${ticketNumber} mis en attente.`);
+      setCart([]);
+      setDiscountPct("");
+      setPromoInput("");
+      setPromoDiscount(0);
+      setAcompte("");
+      setTicketNumber(
+        `TICKET-${Date.now().toString(36).toUpperCase()}${Math.floor(Math.random() * 90 + 10)}`,
+      );
+      await loadPendingCarts();
+    } catch (e: any) {
+      console.error("Erreur mise en attente:", e);
+      toast.error(e.message || "Erreur lors de la mise en attente.");
+    }
+  };
+
+  const loadPendingCart = async (pc: any) => {
+    if (cart.length > 0) {
+      if (!window.confirm("Charger ce panier ? Le panier actuel sera remplacé.")) return;
+    }
+    setCart(Array.isArray(pc.items) ? pc.items : []);
+    setTicketNumber(pc.ticket_number || "");
+    toast.success(`Panier ${pc.ticket_number} chargé.`);
+  };
+
+  const deletePendingCart = async (id: string) => {
+    if (!window.confirm("Supprimer ce panier en attente ?")) return;
+    const { error } = await supabase.from("pending_carts").delete().eq("id", id);
+    if (error) toast.error(error.message);
+    else {
+      toast.success("Panier en attente supprimé.");
+      loadPendingCarts();
+    }
+  };
 
   const cancelSale = () => {
     if (cart.length === 0) return;
@@ -823,6 +886,15 @@ function CaissePage() {
             </Button>
             {cart.length > 0 && (
               <Button
+                onClick={holdCart}
+                variant="outline"
+                className="w-full border-amber-300 text-amber-700 h-11 text-xs font-bold uppercase tracking-[0.15em]"
+              >
+                <PauseCircle className="w-4 h-4 mr-2" /> Mettre en attente
+              </Button>
+            )}
+            {cart.length > 0 && (
+              <Button
                 onClick={cancelSale}
                 variant="ghost"
                 className="w-full text-red-500 hover:bg-red-50 h-10 text-xs font-bold uppercase tracking-[0.15em]"
@@ -832,6 +904,54 @@ function CaissePage() {
             )}
           </div>
         </div>
+      </div>
+
+      {/* ─── PANIERS EN ATTENTE ─── */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs print:hidden">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="flex items-center gap-2 text-sm font-bold text-[#091426]">
+            <PauseCircle className="w-4 h-4" /> Paniers en attente ({pendingCarts.length})
+          </h3>
+          <button
+            onClick={() => loadPendingCarts()}
+            className="text-xs text-slate-400 hover:text-black"
+          >
+            Actualiser
+          </button>
+        </div>
+
+        {pendingCarts.length === 0 ? (
+          <p className="py-6 text-center text-sm text-slate-400">
+            Aucun panier en attente.
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {pendingCarts.map((pc) => (
+              <div
+                key={pc.id}
+                className="border border-slate-200 rounded-xl p-3 flex items-center justify-between gap-2 hover:border-black transition-colors"
+              >
+                <button onClick={() => loadPendingCart(pc)} className="flex-1 min-w-0 text-left">
+                  <p className="text-sm font-bold text-slate-800">{pc.ticket_number}</p>
+                  <p className="text-[10px] text-slate-400">
+                    {new Date(pc.created_at).toLocaleTimeString("fr-FR", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}{" "}
+                    · {Array.isArray(pc.items) ? pc.items.length : 0} article(s) ·{" "}
+                    {formatCurrency(Number(pc.total || 0))}
+                  </p>
+                </button>
+                <button
+                  onClick={() => deletePendingCart(pc.id)}
+                  className="text-slate-300 hover:text-red-500 shrink-0"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ─── MODALE RÉSERVATION ─── */}
