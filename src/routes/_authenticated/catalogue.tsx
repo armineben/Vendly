@@ -1171,79 +1171,41 @@ function Catalogue() {
                       <span>{formatCurrency(cartTotal)}</span>
                     </div>
 
-                    <Button
-                      onClick={() => {
-                        setConfirmMode("purchase");
-                        setShowCartConfirm(true);
+<Button
+                      onClick={async () => {
+                        if (cart.length === 0) return;
+                        const items = cart.map((item) => ({
+                          article_id: item.id,
+                          variante_id: item.variante_id,
+                          designation: item.designation,
+                          reference: item.reference,
+                          taille: item.taille_selectionnee,
+                          couleur: item.couleur_selectionnee,
+                          prix_vente: item.prix_vente,
+                          prix_achat: item.prix_achat,
+                          stock_dispo: item.stock_dispo,
+                          image: item.image,
+                          qty: item.quantite_selectionnee,
+                          discountPct: 0,
+                        }));
+                        const ticket = `TICKET-${Date.now().toString(36).toUpperCase()}${Math.floor(Math.random() * 90 + 10)}`;
+                        try {
+                          const { error } = await supabase
+                            .from("pending_carts")
+                            .insert([{ ticket_number: ticket, items, total: cartTotal }]);
+                          if (error) throw error;
+                          toast.success(`Panier ${ticket} mis en attente.`);
+                          setCart([]);
+                          navigate({ to: "/caisse" });
+                        } catch (e: any) {
+                          toast.error(e.message || "Erreur lors de la mise en attente.");
+                        }
                       }}
-                      disabled={cart.length === 0 || checkoutMutation.isPending}
-                      className="w-full bg-black text-white hover:bg-gray-800 rounded-none h-12 text-[11px] tracking-[0.1em] uppercase font-medium"
+                      disabled={cart.length === 0}
+                      className="w-full bg-amber-600 hover:bg-amber-700 text-white h-12 text-[11px] tracking-[0.1em] uppercase font-medium"
                     >
-                      Valider la vente
+                      Mettre le panier en attente
                     </Button>
-
-                    {showReservationForm ? (
-                      <div className="space-y-2 bg-gray-50 p-3 border border-gray-200">
-                        <p className="text-xs font-medium text-gray-700">
-                          Client (nom & prénom) :
-                        </p>
-                        <Input
-                          placeholder="Prénom"
-                          value={reservationPrenom}
-                          onChange={(e) => setReservationPrenom(e.target.value)}
-                          className="h-9 text-xs rounded-none border-gray-200"
-                        />
-                        <Input
-                          placeholder="Nom"
-                          value={reservationName}
-                          onChange={(e) => setReservationName(e.target.value)}
-                          className="h-9 text-xs rounded-none border-gray-200"
-                        />
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setShowReservationForm(false);
-                              setReservationName("");
-                              setReservationPrenom("");
-                            }}
-                            className="flex-1 rounded-none border-gray-200 text-xs"
-                          >
-                            Annuler
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={() => {
-                              if (
-                                !reservationName.trim() ||
-                                !reservationPrenom.trim()
-                              ) {
-                                toast.error(
-                                  "Veuillez saisir le nom et le prénom",
-                                );
-                                return;
-                              }
-                              setConfirmMode("reservation");
-                              setShowCartConfirm(true);
-                              setShowReservationForm(false);
-                            }}
-                            className="flex-1 bg-amber-600 hover:bg-amber-700 rounded-none text-xs text-white"
-                          >
-                            Confirmer la réservation
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        onClick={() => setShowReservationForm(true)}
-                        disabled={cart.length === 0}
-                        className="w-full border-gray-300 text-black hover:bg-gray-50 rounded-none h-12 text-[11px] tracking-[0.1em] uppercase font-medium"
-                      >
-                        Réserver pendant 24h
-                      </Button>
-                    )}
                   </div>
                 )}
               </SheetContent>
