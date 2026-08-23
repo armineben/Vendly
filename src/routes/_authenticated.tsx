@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   Package,
   Sparkles,
+  ShoppingCart,
   ShoppingBag,
   Receipt,
   Calendar,
@@ -36,6 +37,7 @@ export const Route = createFileRoute("/_authenticated")({
 });
 
 const navItems = [
+  { to: "/caisse" as any, label: "Caisse", icon: ShoppingCart, adminOnly: true },
   { to: "/dashboard" as any, label: "Tableau de bord", icon: LayoutDashboard, adminOnly: true },
   { to: "/catalogue" as any, label: "Catalogue", icon: Sparkles, adminOnly: false },
   { to: "/stock" as any, label: "Stock", icon: Package, adminOnly: true },
