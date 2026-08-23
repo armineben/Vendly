@@ -551,6 +551,7 @@ function ShopPage() {
     governorate: "",
     city: "",
     address: "",
+    paymentMethod: "cod",
   });
   const [deliveryData, setDeliveryData] = useState({
     address: "",
@@ -1386,7 +1387,8 @@ USING (true);
           client_city: customerData.city || undefined,
           client_governorate: customerData.governorate,
           shipping_fees: shippingFeeTnd,
-          delivery_status: "en_attente",
+          payment_method: customerData.paymentMethod || "cod",
+          delivery_status: "prepared",
         };
         // Colonnes absentes de la table (avant migration SQL) : retry avec les colonnes existantes
         const insertDelivery = async (payload: Record<string, any>) => {

@@ -35,7 +35,7 @@ interface CheckoutDrawerProps {
   appliedDiscount: number;
   activePromoCode: string;
   promoInput: string;
-  customerData: { nom: string; prenom: string; telephone: string; email: string; governorate: string; city: string; address: string };
+  customerData: { nom: string; prenom: string; telephone: string; email: string; governorate: string; city: string; address: string; paymentMethod?: string };
   checkoutMutation: { isPending: boolean };
   onClose: () => void;
   onUpdateQuantity: (varianteId: string, delta: number) => void;
@@ -225,7 +225,10 @@ export function CheckoutDrawer({
                     type="radio"
                     name="payment"
                     checked={paymentMethod === "cod"}
-                    onChange={() => setPaymentMethod("cod")}
+                    onChange={() => {
+                      setPaymentMethod("cod");
+                      onCustomerDataChange({ ...customerData, paymentMethod: "cod" });
+                    }}
                     className="accent-black"
                   />
                   <Banknote className="w-5 h-5 text-gray-600" />
@@ -239,7 +242,10 @@ export function CheckoutDrawer({
                     type="radio"
                     name="payment"
                     checked={paymentMethod === "card"}
-                    onChange={() => setPaymentMethod("card")}
+                    onChange={() => {
+                      setPaymentMethod("card");
+                      onCustomerDataChange({ ...customerData, paymentMethod: "card" });
+                    }}
                     className="accent-black"
                   />
                   <CreditCard className="w-5 h-5 text-gray-600" />
