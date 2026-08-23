@@ -2,6 +2,36 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
+// ─── Helper d'envoi Resend ────────────────────────────────────
+async function sendViaResend(to: string, subject: string, html: string) {
+  const resendKey = process.env.RESEND_API_KEY;
+  if (!resendKey) {
+    throw new Error(
+      "Clé Resend absente : configurez la variable RESEND_API_KEY (wrangler secret put).",
+    );
+  }
+  const from =
+    process.env.RESEND_FROM || "Vendly <onboarding@resend.dev>";
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${resendKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ from, to, subject, html }),
+  });
+  if (res.status === 401 || res.status === 403) {
+    throw new Error(
+      "Clé API Resend invalide ou expirée (401/403). Régénérez une clé sur https://resend.com et mettez à jour RESEND_API_KEY.",
+    );
+  }
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Erreur Resend (${res.status}) : ${body}`);
+  }
+  return res;
+}
+
 const ConfirmationInput = z.object({
   email: z.string().email(),
   nom: z.string(),
@@ -63,24 +93,12 @@ export const sendReservationConfirmation = createServerFn({ method: "POST" })
       <p style="margin-top:20px;font-size:11px;color:#999;text-align:center;">Vendly — Boutique mode</p>
     </body></html>`;
 
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${resendKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from,
-        to: data.email,
-        subject: "Confirmation de votre réservation — Vendly",
-        html,
-      }),
-    });
+    const res = await sendViaResend(
+      data.email,
+      "Confirmation de votre réservation — Vendly",
+      html,
+    );
 
-    if (!res.ok) {
-      const body = await res.text();
-      throw new Error(`Erreur Resend : ${body}`);
-    }
     return { ok: true };
   });
 
@@ -96,9 +114,7 @@ export const checkExpiredReservations = createServerFn({ method: "POST" })
 
     if (!expired || expired.length === 0) return { expired: 0, emailed: 0 };
 
-    let emailed = 0;
-    const resendKey = process.env.RESEND_API_KEY;
-    const from = process.env.RESEND_FROM || "Vendly <onboarding@resend.dev>";
+        let emailed = 0;
 
     for (const r of expired) {
       const email = r.email;
@@ -122,24 +138,14 @@ export const checkExpiredReservations = createServerFn({ method: "POST" })
       </body></html>`;
 
       try {
-        if (resendKey) {
-          const res = await fetch("https://api.resend.com/emails", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${resendKey}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              from,
-              to: email,
-              subject: "Votre réservation est expirée — Vendly",
-              html,
-            }),
-          });
-          if (res.ok) emailed++;
-        }
-      } catch {
-        // continue
+        await sendViaResend(
+          email,
+          "Votre réservation est expirée — Vendly",
+          html,
+        );
+        emailed++;
+      } catch (err) {
+        console.error("Erreur envoi expiration à", email, ":", err);
       }
 
       // Marquer comme expirée
