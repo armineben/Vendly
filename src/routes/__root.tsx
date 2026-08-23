@@ -37,6 +37,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     ],
     links: [
       { rel: "stylesheet", href: appCss },
+      { rel: "icon", type: "image/png", sizes: "192x192", href: "/icons/icon-192.png" },
+      { rel: "apple-touch-icon", href: "/icons/apple-touch-icon.png" },
       {
         rel: "manifest",
         href: IS_ADMIN_MODE ? "/manifest-admin.json" : "/manifest.json",

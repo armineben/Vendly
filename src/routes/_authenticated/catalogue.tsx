@@ -461,7 +461,7 @@ function Catalogue() {
     const g = filterGenre.toLowerCase();
     if (g.includes("homme")) return "/videos/Vhomme.mp4";
     if (g.includes("femme")) return "/videos/Vfemme.mp4";
-    if (g.includes("enfant")) return "/videos/Venfents.mp4";
+    if (g.includes("enfant")) return "/videos/Venfant.mp4";
     return BANNER_CONFIG.defaultVideo;
   }, [filterGenre]);
 
