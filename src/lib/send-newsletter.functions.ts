@@ -48,6 +48,7 @@ export const sendNewsletter = createServerFn({ method: "POST" })
 
     // 3. Envoi via Resend si une clé API est configurée
     const resendKey = process.env.RESEND_API_KEY;
+    const from = process.env.RESEND_FROM || "Vendly <onboarding@resend.dev>";
     if (resendKey) {
       for (const email of emails) {
         try {
@@ -58,7 +59,7 @@ export const sendNewsletter = createServerFn({ method: "POST" })
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              from: "Vendly <newsletter@vendly.tn>",
+              from,
               to: email,
               subject,
               html,
