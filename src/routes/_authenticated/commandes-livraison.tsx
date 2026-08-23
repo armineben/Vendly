@@ -495,6 +495,9 @@ function CommandesLivraisonPage() {
                       {Array.isArray(items) && items.length > 2 && <div className="text-[10px] text-muted-foreground">+{items.length - 2} autre(s)</div>}
                     </td>
                     <td className="px-3 py-3 text-right font-medium">{formatCurrency(c.total_price)}</td>
+                    <td className="px-3 py-3 text-[10px] text-muted-foreground">
+                      {c.payment_method === "card" ? "Carte" : c.payment_method === "especes" ? "Especes" : c.payment_method || "--"}
+                    </td>
                     <td className="px-3 py-3">
                       {isAdmin ? (
                         <button
