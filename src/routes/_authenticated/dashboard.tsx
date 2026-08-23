@@ -268,9 +268,6 @@ function DashboardPage() {
               />
             </div>
             <h2 className="text-xl font-bold text-white text-center">{userName}</h2>
-            <p className="text-sm text-zinc-300 mt-0.5">
-              {user?.email?.split("@")[0] || "Collaborateur"}
-            </p>
             <span className="mt-2 inline-flex items-center rounded-full bg-white/15 text-white/90 px-3 py-1 text-[10px] font-bold uppercase tracking-widest border border-white/10">
               {isAdmin ? "Manager Boutique" : "Vendeur"}
             </span>
