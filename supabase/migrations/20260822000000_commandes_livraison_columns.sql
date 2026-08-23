@@ -15,6 +15,9 @@ ALTER TABLE commandes_livraison
   ADD COLUMN IF NOT EXISTS courier_company text,
   ADD COLUMN IF NOT EXISTS payment_method text;
 
+-- Recharger le cache schéma PostgREST (élimine l'erreur "could not find column in the schema cache")
+NOTIFY pgrst, 'reload schema';
+
 -- Vérification des colonnes
 SELECT column_name, data_type
 FROM information_schema.columns
