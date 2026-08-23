@@ -312,7 +312,7 @@ export function NewsletterBuilder() {
                   <Label className="text-[10px] uppercase tracking-wider text-slate-400">
                     Format des photos
                   </Label>
-                  <div className="flex gap-2 mt-1.5">
+                <div className="grid grid-cols-3 gap-2 mt-1.5">
                     {FORMATS.map((f) => (
                       <button
                         key={f.id}

@@ -1695,7 +1695,7 @@ USING (true);
   );
 
   return (
-    <div className="min-h-screen bg-white text-black font-sans antialiased">
+    <div className="min-h-screen bg-white text-black font-sans antialiased overflow-x-hidden">
       {/* NAVBAR STYLE DIOR */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100 py-4 px-6 md:px-12">
         <div className="max-w-[1800px] mx-auto flex items-center justify-between">

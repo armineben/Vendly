@@ -182,7 +182,7 @@ export function MegaMenu({
       onMouseEnter={cancelHover}
       onMouseLeave={closeDropdown}
     >
-      <div className="flex justify-center gap-4 md:gap-10 py-8 px-4 bg-white border-b border-gray-100">
+      <div className="flex overflow-x-auto no-scrollbar justify-start md:justify-center gap-4 md:gap-10 py-5 md:py-8 px-4 bg-white border-b border-gray-100">
         <button
           onClick={() => {
             onSelectAll();

@@ -442,7 +442,7 @@ function BannersTab() {
     <div className="space-y-6">
       {/* ── Section : Vidéo par défaut / Type global ── */}
       <CardSection title="Type de bannière">
-        <div className="flex gap-4">
+        <div className="flex flex-wrap gap-x-4 gap-y-2">
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="radio"
