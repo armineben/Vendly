@@ -331,17 +331,24 @@ function CaissePage() {
     }
     setSubmitting(true);
     try {
-      const { error } = await supabase.from("sales").insert([
-        {
-          items: buildItemsPayload(),
-          total,
-          customer_name: "Caisse",
-          customer_phone: "",
-          payment_method: paymentMethod,
-          acompte: acompteNum > 0 ? acompteNum : null,
-        },
-      ]);
-      if (error) throw error;
+      const baseSale = {
+        items: buildItemsPayload(),
+        total,
+        customer_name: "Caisse",
+        customer_phone: "",
+        payment_method: paymentMethod,
+      };
+      // Insertion résiliente : si la colonne acompte est absente (42703), retry sans.
+      let { error } = await supabase
+        .from("sales")
+        .insert([{ ...baseSale, acompte: acompteNum > 0 ? acompteNum : null }]);
+      if (error && error.code === "42703") {
+        ({ error } = await supabase.from("sales").insert([baseSale]));
+      }
+      if (error) {
+        console.error("Erreur encaissement:", error);
+        throw new Error(`Encaissement impossible (${error.code}): ${error.message}`);
+      }
       await deductStock();
 
       const invNumber = `FACT-${Date.now().toString(36).toUpperCase()}`;
