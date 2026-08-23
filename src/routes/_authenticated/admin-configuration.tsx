@@ -167,7 +167,7 @@ function AdminConfiguration() {
       </div>
 
       <Tabs defaultValue="banners" className="space-y-6">
-        <TabsList className="w-full flex-wrap justify-start bg-slate-100 p-1 gap-1 rounded-xl">
+        <TabsList className="w-full flex-wrap justify-start bg-slate-100 p-1.5 gap-1.5 rounded-xl h-auto min-h-9">
           <TabsTrigger value="banners" className="rounded-lg data-[state=active]:shadow-xs gap-2">
             <Image className="h-4 w-4" /> Couvertures
           </TabsTrigger>
