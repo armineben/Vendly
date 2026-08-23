@@ -178,16 +178,11 @@ function CaissePage() {
       stock = Number(article.quantite || 0);
     }
     if (stock <= 0) {
-      toast.error("Rupture de stock");
-      return;
+      toast.warning("Stock à zéro — ajout en mode caisse (surstock).");
     }
     setCart((prev) => {
       const existing = prev.find((i) => i.variante_id === varianteId);
       if (existing) {
-        if (existing.qty >= stock) {
-          toast.error("Stock maximal atteint");
-          return prev;
-        }
         return prev.map((i) =>
           i.variante_id === varianteId ? { ...i, qty: i.qty + 1 } : i,
         );
@@ -217,7 +212,7 @@ function CaissePage() {
       prev
         .map((i) =>
           i.variante_id === varianteId
-            ? { ...i, qty: Math.min(Math.max(i.qty + delta, 1), i.stock_dispo) }
+            ? { ...i, qty: Math.max(i.qty + delta, 1) }
             : i,
         )
         .filter((i) => i.qty > 0),
@@ -622,6 +617,11 @@ function CaissePage() {
                       <p className="text-[10px] text-slate-400">
                         {item.taille} {item.taille && item.couleur ? "·" : ""} {item.couleur}
                       </p>
+                      {item.qty > item.stock_dispo && (
+                        <p className="text-[10px] font-bold text-amber-600 mt-0.5">
+                          ⚠ Surstock : {item.stock_dispo} dispo en stock
+                        </p>
+                      )}
                       <div className="flex items-center justify-between mt-2">
                         <div className="flex items-center border border-slate-200 rounded-lg">
                           <button onClick={() => updateQty(item.variante_id, -1)} className="px-2 py-1 hover:bg-slate-50"><Minus className="w-3 h-3" /></button>
