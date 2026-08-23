@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -53,6 +53,9 @@ function CaissePage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [cart, setCart] = useState<PosItem[]>([]);
+  const [ticketNumber, setTicketNumber] = useState(() =>
+    `TICKET-${Date.now().toString(36).toUpperCase()}${Math.floor(Math.random() * 90 + 10)}`,
+  );
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -100,6 +103,38 @@ function CaissePage() {
       return data ?? [];
     },
   });
+
+  // Réception des articles sélectionnés depuis le Catalogue
+  useEffect(() => {
+    if (isLoading || articles.length === 0) return;
+    try {
+      const raw = localStorage.getItem("pos-transfer-items");
+      if (!raw) return;
+      const ids = JSON.parse(raw) as string[];
+      if (ids.length === 0) return;
+      ids.forEach((id) => {
+        const art = articles.find((a: any) => a.id === id);
+        if (art) addToCart(art);
+      });
+      localStorage.removeItem("pos-transfer-items");
+      toast.success(`${ids.length} article(s) transféré(s) depuis le catalogue.`);
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, articles.length]);
+
+  const cancelSale = () => {
+    if (cart.length === 0) return;
+    if (!window.confirm("Annuler la vente ? Le panier sera vidé.")) return;
+    setCart([]);
+    setDiscountPct("");
+    setPromoInput("");
+    setPromoDiscount(0);
+    setAcompte("");
+    setTicketNumber(
+      `TICKET-${Date.now().toString(36).toUpperCase()}${Math.floor(Math.random() * 90 + 10)}`,
+    );
+    toast.success("Vente annulée, panier vidé.");
+  };
 
   const categories = useMemo(() => {
     const set = new Set<string>();
@@ -620,9 +655,14 @@ function CaissePage() {
 
         {/* ─── PANIER ─── */}
         <div className="xl:col-span-2 bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-col print:hidden">
-          <h2 className="flex items-center gap-2 text-sm font-bold text-[#091426] mb-4">
-            <ShoppingCart className="w-4 h-4" /> Panier ({cart.reduce((s, i) => s + i.qty, 0)})
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="flex items-center gap-2 text-sm font-bold text-[#091426]">
+              <ShoppingCart className="w-4 h-4" /> Panier ({cart.reduce((s, i) => s + i.qty, 0)})
+            </h2>
+            <span className="inline-flex items-center rounded-full bg-zinc-100 text-zinc-700 px-3 py-1 text-[10px] font-bold tracking-wider">
+              {ticketNumber}
+            </span>
+          </div>
 
           <div className="flex-1 space-y-3 max-h-[45vh] overflow-y-auto pr-1">
             {cart.length === 0 ? (
@@ -774,6 +814,15 @@ function CaissePage() {
             >
               <CalendarPlus className="w-4 h-4 mr-2" /> Réserver
             </Button>
+            {cart.length > 0 && (
+              <Button
+                onClick={cancelSale}
+                variant="ghost"
+                className="w-full text-red-500 hover:bg-red-50 h-10 text-xs font-bold uppercase tracking-[0.15em]"
+              >
+                <Trash2 className="w-4 h-4 mr-2" /> Annuler la vente
+              </Button>
+            )}
           </div>
         </div>
       </div>

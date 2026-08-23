@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/sheet";
 import {
   ShoppingBag,
+  ShoppingCart,
+  Check,
   Plus,
   Minus,
   X,
@@ -180,6 +182,8 @@ function ProductCard({
   selectedTaille,
   onColorChange,
   onSizeChange,
+  posSelected,
+  onPosToggle,
 }: {
   art: any;
   viewMode?: "grid" | "compact" | "list";
@@ -189,6 +193,8 @@ function ProductCard({
   selectedTaille: string;
   onColorChange: (id: string, couleur: string) => void;
   onSizeChange: (id: string, taille: string) => void;
+  posSelected?: boolean;
+  onPosToggle?: (id: string, e: React.MouseEvent) => void;
 }) {
   const variantes = art.variantes || [];
   const couleursArt = Array.from(
@@ -324,6 +330,20 @@ function ProductCard({
           Stock: {stockAffiche}
         </span>
         <DiscountBadge percent={getDiscountPercent(art)} />
+
+        {onPosToggle && (
+          <button
+            onClick={(e) => onPosToggle(art.id, e)}
+            title={posSelected ? "Retirer de la caisse" : "Ajouter à la caisse"}
+            className={`absolute top-3 left-3 w-7 h-7 rounded-full flex items-center justify-center border shadow-sm z-10 transition-colors ${
+              posSelected
+                ? "bg-emerald-600 border-emerald-600 text-white"
+                : "bg-white border-gray-200 text-gray-400 hover:text-black"
+            }`}
+          >
+            {posSelected ? <Check className="w-3.5 h-3.5" /> : <ShoppingCart className="w-3.5 h-3.5" />}
+          </button>
+        )}
       </div>
 
       <div
@@ -414,7 +434,9 @@ function ProductCard({
 function Catalogue() {
   const { user } = useAuth();
   const qc = useQueryClient();
+  const navigate = useNavigate();
 
+  const [selectedForPos, setSelectedForPos] = useState<string[]>([]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -657,6 +679,30 @@ function Catalogue() {
 
   const handleSizeChange = (id: string, taille: string) => {
     setSelectedTailles((prev) => ({ ...prev, [id]: taille }));
+  };
+
+  // Sélection POS : bascule un article vers la caisse
+  const togglePos = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedForPos((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  };
+
+  const sendToPos = () => {
+    if (selectedForPos.length === 0) {
+      toast.error("Sélectionnez au moins un article.");
+      return;
+    }
+    try {
+      localStorage.setItem(
+        "pos-transfer-items",
+        JSON.stringify(selectedForPos),
+      );
+    } catch {}
+    setSelectedForPos([]);
+    toast.success(`${selectedForPos.length} article(s) envoyé(s) à la caisse.`);
+    navigate({ to: "/caisse" });
   };
 
   const addToCart = (article: any, couleur?: string, taille?: string) => {
@@ -1398,6 +1444,8 @@ function Catalogue() {
                   viewMode={viewMode}
                   onQuickView={handleQuickView}
                   onQuickAdd={addToCart}
+                  posSelected={selectedForPos.includes(art.id)}
+                  onPosToggle={togglePos}
                   selectedCouleur={
                     selectedCouleurs[art.id] || couleursArt[0] || ""
                   }
@@ -1657,6 +1705,24 @@ function Catalogue() {
           checkoutMutation.isPending || reservationMutation.isPending
         }
       />
+
+      {/* BARRE FLOTTANTE : ENVOYER À LA CAISSE */}
+      {selectedForPos.length > 0 && (
+        <div className="fixed bottom-0 inset-x-0 z-50 p-4 flex justify-center pointer-events-none">
+          <button
+            onClick={sendToPos}
+            className="pointer-events-auto flex items-center gap-3 bg-black text-white rounded-full pl-4 pr-6 py-3 shadow-2xl hover:bg-zinc-800 transition-colors"
+          >
+            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-white/20 text-xs font-bold">
+              {selectedForPos.length}
+            </span>
+            <ShoppingCart className="w-4 h-4" />
+            <span className="text-xs font-bold uppercase tracking-widest">
+              Envoyer à la caisse
+            </span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }
