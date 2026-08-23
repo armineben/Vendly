@@ -379,11 +379,11 @@ function CaissePage() {
         statut: "en_attente",
       };
 
-      // Insertion résiliente : si contrainte NOT NULL sur colonnes héritées,
-      // on complète avec les valeurs de repli et on réessaie.
+      // Insertion résiliente : si contrainte NOT NULL (23502) ou colonne manquante
+      // (42703) sur le schéma actuel, on complète avec les colonnes héritées.
       let { error } = await supabase.from("reservations").insert([basePayload]);
-      if (error && error.code === "23502") {
-        ({ error } = await supabase.from("reservations").insert([
+      if (error && (error.code === "23502" || error.code === "42703")) {
+        const legacy = await supabase.from("reservations").insert([
           {
             ...basePayload,
             client_name: `${resPrenom.trim()} ${resNom.trim()}`.trim(),
@@ -391,30 +391,41 @@ function CaissePage() {
             status: "actif",
             expiration_date: expiresAt.toISOString(),
           },
-        ]));
+        ]);
+        error = legacy.error;
       }
-      if (error) throw error;
+      if (error) {
+        console.error("Erreur insertion réservation:", error);
+        throw new Error(
+          `Insertion réservation impossible (${error.code}): ${error.message}`,
+        );
+      }
 
-      // Email de confirmation
-      try {
-        await sendReservationConfirmation({
-          data: {
-            email: resEmail.trim(),
-            nom: resNom.trim(),
-            prenom: resPrenom.trim(),
-            telephone: resTel,
-            acompte,
-            dateExpiration: expiresAt.toISOString(),
-            items: cart.map((i) => ({
-              designation: i.designation,
-              quantite: i.qty,
-              prix_unitaire: effPrice(i),
-            })),
-          },
+      // Email de confirmation — indépendant, jamais bloquant
+      sendReservationConfirmation({
+        data: {
+          email: resEmail.trim(),
+          nom: resNom.trim(),
+          prenom: resPrenom.trim(),
+          telephone: resTel,
+          acompte,
+          dateExpiration: expiresAt.toISOString(),
+          items: cart.map((i) => ({
+            designation: i.designation,
+            quantite: i.qty,
+            prix_unitaire: effPrice(i),
+          })),
+        },
+      })
+        .then(() => {
+          toast.success("Email de confirmation envoyé.");
+        })
+        .catch((err) => {
+          console.error("Erreur envoi email réservation:", err);
+          toast.warning(
+            "Réservation enregistrée, mais l'email n'a pas pu être envoyé.",
+          );
         });
-      } catch {
-        toast.warning("Réservation créée mais l'email n'a pas pu être envoyé.");
-      }
 
       toast.success("Réservation créée ! Confirmation envoyée par email.");
       setCart([]);
@@ -429,7 +440,10 @@ function CaissePage() {
       qc.invalidateQueries({ queryKey: ["pos-variantes"] });
       navigate({ to: "/reservations" });
     } catch (e: any) {
-      toast.error(e.message || "Erreur lors de la réservation");
+      console.error("Erreur validation réservation (POS):", e);
+      toast.error(
+        (e?.message || "Erreur lors de la réservation").slice(0, 300),
+      );
     } finally {
       setResSubmitting(false);
     }
