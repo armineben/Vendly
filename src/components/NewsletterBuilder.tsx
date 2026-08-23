@@ -19,6 +19,11 @@ import {
   Search,
   GripVertical,
   Send,
+  Gift,
+  Users,
+  Filter,
+  DollarSign,
+  Ticket,
 } from "lucide-react";
 
 type Frame = "hero" | "duo" | "trio" | "magazine";
@@ -77,6 +82,13 @@ export function NewsletterBuilder() {
   const [sending, setSending] = useState(false);
   const [subscriberCount, setSubscriberCount] = useState(0);
   const [savedList, setSavedList] = useState<NewsletterRow[]>([]);
+  const [subscribers, setSubscribers] = useState<any[]>([]);
+  const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
+  const [threshold, setThreshold] = useState("");
+  const [thresholdActive, setThresholdActive] = useState(false);
+  const [gcAmount, setGcAmount] = useState("");
+  const [gcCode, setGcCode] = useState("");
+  const [gcEnabled, setGcEnabled] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -97,7 +109,38 @@ export function NewsletterBuilder() {
     load();
     loadSaved();
     loadSubscriberCount();
+    loadSubscribers();
+    loadPurchaseTotals();
   }, []);
+
+  const loadSubscribers = async () => {
+    const { data } = await supabase
+      .from("newsletter_subscribers")
+      .select("email, created_at")
+      .order("created_at", { ascending: false });
+    setSubscribers(data ?? []);
+  };
+
+  const [purchaseTotals, setPurchaseTotals] = useState<Record<string, number>>(
+    {},
+  );
+  const loadPurchaseTotals = async () => {
+    try {
+      const { data } = await supabase.from("commandes_livraison").select(
+        "client_email, total_price",
+      );
+      const map: Record<string, number> = {};
+      (data ?? []).forEach((c: any) => {
+        if (c.client_email) {
+          map[c.client_email] =
+            (map[c.client_email] || 0) + Number(c.total_price || 0);
+        }
+      });
+      setPurchaseTotals(map);
+    } catch {
+      setPurchaseTotals({});
+    }
+  };
 
   const loadSubscriberCount = async () => {
     const { count, error } = await supabase
@@ -189,6 +232,40 @@ export function NewsletterBuilder() {
     return data?.id ?? null;
   };
 
+  // Abonnés filtrés par seuil d'achats
+  const filteredSubscribers = useMemo(() => {
+    if (!thresholdActive || !threshold) return subscribers;
+    const t = Number(threshold);
+    return subscribers.filter(
+      (s: any) => (purchaseTotals[s.email] || 0) >= t,
+    );
+  }, [subscribers, thresholdActive, threshold, purchaseTotals]);
+
+  const toggleEmail = (email: string) => {
+    setSelectedEmails((prev) =>
+      prev.includes(email)
+        ? prev.filter((e) => e !== email)
+        : [...prev, email],
+    );
+  };
+
+  const toggleAll = () => {
+    const all = filteredSubscribers.map((s: any) => s.email);
+    setSelectedEmails((prev) =>
+      prev.length === all.length && all.length > 0 ? [] : all,
+    );
+  };
+
+  const generateGiftCode = () => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let code = "CADEAU-";
+    for (let i = 0; i < 6; i++) {
+      code += chars[Math.floor(Math.random() * chars.length)];
+    }
+    setGcCode(code);
+    setGcEnabled(true);
+  };
+
   const sendNow = async () => {
     if (!subject.trim()) {
       toast.error("Veuillez saisir un objet pour la newsletter.");
@@ -198,16 +275,44 @@ export function NewsletterBuilder() {
       toast.error("Ajoutez au moins un bloc avant d'envoyer.");
       return;
     }
-    if (subscriberCount === 0) {
-      toast.warning("Aucun abonné à la newsletter pour le moment.");
+
+    // Cible : abonnés cochés / filtrés, sinon tous
+    let targets = filteredSubscribers.map((s: any) => s.email);
+    if (selectedEmails.length > 0) {
+      targets = targets.filter((e) => selectedEmails.includes(e));
+    }
+    if (targets.length === 0) {
+      toast.warning("Aucun abonné ciblé. Cochez des abonnés ou désactivez le filtre.");
       return;
     }
+
     setSending(true);
     try {
       const newsletterId = await save();
       if (!newsletterId) return;
+
+      // Carte cadeau : enregistrer et injecter dans l'email
+      let giftCard: { amount: number; code: string } | undefined;
+      if (gcEnabled && gcCode) {
+        const amount = Number(gcAmount) || 0;
+        if (amount <= 0) {
+          toast.error("Veuillez saisir un montant valide pour la carte cadeau.");
+          return;
+        }
+        await supabase
+          .from("gift_cards")
+          .insert({ amount, code: gcCode, newsletter_id: newsletterId });
+        giftCard = { amount, code: gcCode };
+      }
+
       const result = await sendNewsletter({
-        data: { newsletterId, subject: subject.trim(), content: blocks },
+        data: {
+          newsletterId,
+          subject: subject.trim(),
+          content: blocks,
+          emails: targets,
+          giftCard,
+        },
       });
       toast.success(
         `Newsletter envoyée à ${result.sent} abonné${
@@ -441,29 +546,183 @@ export function NewsletterBuilder() {
           </Button>
         </div>
 
+        {/* CIBLAGE DES ABONNÉS */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
+          <h3 className="flex items-center gap-2 text-sm font-bold text-[#091426] mb-4">
+            <Users className="w-4 h-4" /> Ciblage des abonnés
+          </h3>
+
+          {/* Seuil d'achats */}
+          <div className="flex items-center gap-3 mb-4 pb-4 border-b border-slate-100">
+            <div className="flex items-center gap-1.5 shrink-0">
+              <Filter className="w-3.5 h-3.5 text-slate-400" />
+              <span className="text-xs text-slate-500">Seuil</span>
+            </div>
+            <Input
+              type="number"
+              min="0"
+              step="1"
+              value={threshold}
+              onChange={(e) => setThreshold(e.target.value)}
+              placeholder="50 DT"
+              className="h-8 w-24 text-xs rounded-lg"
+            />
+            <button
+              onClick={() => setThresholdActive(!thresholdActive)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                thresholdActive
+                  ? "bg-black text-white"
+                  : "bg-slate-100 text-slate-500"
+              }`}
+            >
+              {thresholdActive ? "Filtré" : "Filtrer"}
+            </button>
+            {thresholdActive && (
+              <span className="text-xs text-slate-400">
+                {filteredSubscribers.length} correspondant
+                {filteredSubscribers.length > 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
+
+          {/* Liste des abonnés */}
+          <div className="max-h-40 overflow-y-auto space-y-1 mb-3">
+            {filteredSubscribers.length === 0 ? (
+              <p className="text-xs text-slate-400 py-2 text-center">
+                Aucun abonné
+              </p>
+            ) : (
+              <label className="flex items-center gap-2 pb-2 border-b border-slate-100 mb-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={
+                    filteredSubscribers.length > 0 &&
+                    selectedEmails.length === filteredSubscribers.length
+                  }
+                  onChange={toggleAll}
+                  className="accent-black"
+                />
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                  Tout sélectionner ({filteredSubscribers.length})
+                </span>
+              </label>
+            )}
+            {filteredSubscribers.map((s: any) => (
+              <label
+                key={s.email}
+                className="flex items-center gap-2 py-1 cursor-pointer hover:bg-slate-50 rounded px-1"
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedEmails.includes(s.email)}
+                  onChange={() => toggleEmail(s.email)}
+                  className="accent-black"
+                />
+                <span className="flex-1 text-xs truncate">{s.email}</span>
+                {purchaseTotals[s.email] ? (
+                  <span className="text-[10px] text-slate-400">
+                    {formatCurrency(purchaseTotals[s.email])}
+                  </span>
+                ) : null}
+              </label>
+            ))}
+          </div>
+          {selectedEmails.length > 0 && (
+            <p className="text-[10px] text-slate-500">
+              {selectedEmails.length} abonné{selectedEmails.length > 1 ? "s" : ""} sélectionné{selectedEmails.length > 1 ? "s" : ""}
+            </p>
+          )}
+        </div>
+
+        {/* CARTE CADEAU */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
+          <h3 className="flex items-center gap-2 text-sm font-bold text-[#091426] mb-4">
+            <Gift className="w-4 h-4" /> Carte cadeau & Code promo
+          </h3>
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <Label className="text-xs text-slate-500 shrink-0 min-w-[60px]">
+                Montant
+              </Label>
+              <Input
+                type="number"
+                min="0"
+                step="5"
+                value={gcAmount}
+                onChange={(e) => setGcAmount(e.target.value)}
+                placeholder="50 DT"
+                className="h-8 w-24 text-xs rounded-lg"
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <Label className="text-xs text-slate-500 shrink-0 min-w-[60px]">
+                Code
+              </Label>
+              <Input
+                value={gcCode}
+                onChange={(e) => setGcCode(e.target.value.toUpperCase())}
+                placeholder="CADEAU-XXXXXX"
+                className="h-8 flex-1 text-xs rounded-lg font-mono font-bold"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={generateGiftCode}
+                className="h-8 text-xs"
+              >
+                <Ticket className="w-3 h-3 mr-1" /> Générer
+              </Button>
+            </div>
+
+            {/* Aperçu carte cadeau */}
+            {gcEnabled && gcCode && (
+              <div className="border border-dashed border-indigo-200 rounded-xl p-4 bg-gradient-to-br from-indigo-50 to-purple-50 text-center">
+                <Gift className="w-8 h-8 text-indigo-500 mx-auto mb-2" />
+                <p className="text-[10px] uppercase tracking-widest text-indigo-600 font-bold">
+                  Carte Cadeau
+                </p>
+                <p className="text-2xl font-bold text-indigo-900 my-1">
+                  {gcAmount ? `${Number(gcAmount).toFixed(2)} DT` : "Montant"}
+                </p>
+                <p className="text-xs font-mono font-bold bg-white border border-indigo-200 rounded-lg px-3 py-1.5 inline-block">
+                  {gcCode}
+                </p>
+                <p className="text-[9px] text-indigo-400 mt-2">
+                  Offrez ce code lors du checkout
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* ENVOI */}
         <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <p className="text-sm font-bold text-[#091426]">
-                {subscriberCount} abonné{subscriberCount > 1 ? "s" : ""} prêt{subscriberCount > 1 ? "s" : ""} à recevoir la newsletter
+                {filteredSubscribers.length} abonné{filteredSubscribers.length > 1 ? "s" : ""} ciblé{filteredSubscribers.length > 1 ? "s" : ""}
               </p>
               <p className="text-xs text-slate-500 mt-1">
-                L'envoi concerne tous les e-mails de la table
-                newsletter_subscribers.
+                {selectedEmails.length > 0
+                  ? `${selectedEmails.length} sélectionné${selectedEmails.length > 1 ? "s" : ""}`
+                  : filteredSubscribers.length === 0
+                    ? "Aucun abonné à cibler"
+                    : thresholdActive
+                      ? "Tous les abonnés filtrés seront ciblés"
+                      : "Tous les abonnés seront ciblés"}
               </p>
             </div>
             <Button
               onClick={sendNow}
-              disabled={sending || subscriberCount === 0}
+              disabled={sending || filteredSubscribers.length === 0}
               className="bg-emerald-600 hover:bg-emerald-700 text-white"
             >
               <Send className="w-4 h-4 mr-2" />
               {sending
                 ? "Envoi en cours..."
-                : subscriberCount === 0
+                : filteredSubscribers.length === 0
                   ? "Aucun abonné"
-                  : `Envoyer à ${subscriberCount} abonné${subscriberCount > 1 ? "s" : ""}`}
+                  : `Envoyer${gcEnabled && gcCode ? " avec carte" : ""}`}
             </Button>
           </div>
         </div>

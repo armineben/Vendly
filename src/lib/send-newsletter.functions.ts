@@ -6,12 +6,19 @@ const SendInput = z.object({
   newsletterId: z.string().min(1),
   subject: z.string(),
   content: z.any(),
+  emails: z.array(z.string()).optional(),
+  giftCard: z
+    .object({
+      amount: z.number(),
+      code: z.string(),
+    })
+    .optional(),
 });
 
 export const sendNewsletter = createServerFn({ method: "POST" })
   .inputValidator((input) => SendInput.parse(input))
   .handler(async ({ data }) => {
-    const { newsletterId, subject, content } = data;
+    const { newsletterId, subject, content, emails, giftCard } = data;
 
     // 1. Récupérer les abonnés
     const { data: subscribers, error: subError } = await supabaseAdmin
@@ -22,6 +29,13 @@ export const sendNewsletter = createServerFn({ method: "POST" })
     if (!subscribers || subscribers.length === 0) {
       return { sent: 0, skipped: 0, total: 0 };
     }
+
+    // Cibler les emails fournis (sinon tous)
+    const emailsList =
+      emails && emails.length > 0
+        ? subscribers.filter((s: any) => emails.includes(s.email)).map((s: any) => s.email)
+        : subscribers.map((s: any) => s.email);
+    if (emailsList.length === 0) return { sent: 0, skipped: 0, total: 0 };
 
     // 2. Récupérer les articles référencés dans les blocs
     const ids = Array.from(
@@ -40,8 +54,7 @@ export const sendNewsletter = createServerFn({ method: "POST" })
     const artMap: Record<string, any> = {};
     articles.forEach((a: any) => (artMap[a.id] = a));
 
-    const emails = subscribers.map((s: any) => s.email);
-    const html = buildEmailHtml(subject, content, artMap);
+    const html = buildEmailHtml(subject, content, artMap, giftCard);
 
     let sent = 0;
     let skipped = 0;
@@ -50,7 +63,7 @@ export const sendNewsletter = createServerFn({ method: "POST" })
     const resendKey = process.env.RESEND_API_KEY;
     const from = process.env.RESEND_FROM || "Vendly <onboarding@resend.dev>";
     if (resendKey) {
-      for (const email of emails) {
+      for (const email of emailsList) {
         try {
           const res = await fetch("https://api.resend.com/emails", {
             method: "POST",
@@ -89,7 +102,12 @@ function buildEmailHtml(
   subject: string,
   blocks: any[],
   artMap: Record<string, any>,
+  giftCard?: { amount: number; code: string },
 ): string {
+  const giftHtml = giftCard
+    ? `<table width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;"><tr><td align="center"><div style="background:linear-gradient(135deg,#5C2D91,#7c3aed);border-radius:16px;padding:24px;max-width:360px;color:#fff;text-align:center;"><p style="font-size:11px;text-transform:uppercase;letter-spacing:0.15em;opacity:.85;margin:0;">Carte Cadeau Vendly</p><p style="font-size:30px;font-weight:bold;margin:8px 0;">${Number(giftCard.amount).toFixed(2)} DT</p><div style="display:inline-block;background:#fff;color:#5C2D91;border-radius:8px;padding:8px 16px;font-family:monospace;font-weight:bold;letter-spacing:0.05em;">${giftCard.code}</div><p style="font-size:11px;opacity:.85;margin-top:12px;">Utilisez ce code lors du paiement en ligne</p></div></td></tr></table>`
+    : "";
+
   const blockHtml = (blocks || [])
     .map((b: any) => {
       if (!b || !Array.isArray(b.articleIds) || b.articleIds.length === 0)
@@ -124,7 +142,7 @@ function buildEmailHtml(
     })
     .join("\n");
 
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family:Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;"><h1 style="font-size:22px;text-transform:uppercase;letter-spacing:0.1em;">${subject}</h1>${blockHtml}<p style="margin-top:30px;font-size:11px;color:#999;text-align:center;">Vendly — Boutique mode</p></body></html>`;
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family:Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;"><h1 style="font-size:22px;text-transform:uppercase;letter-spacing:0.1em;">${subject}</h1>${blockHtml}${giftHtml}<p style="margin-top:30px;font-size:11px;color:#999;text-align:center;">Vendly — Boutique mode</p></body></html>`;
 }
 
 function artMapByIds(
