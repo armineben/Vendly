@@ -52,7 +52,7 @@ export function VendeurProfil() {
             full_name:
               profileData?.display_name ||
               (user.user_metadata?.full_name as string | undefined) ||
-              "Vendeuse Secret's",
+              "Vendeur/Conseiller",
             role: roleLabels[appRole] ?? "Vendeuse",
           });
 
