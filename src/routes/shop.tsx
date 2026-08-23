@@ -1386,7 +1386,7 @@ USING (true);
           client_city: customerData.city || undefined,
           client_governorate: customerData.governorate,
           shipping_fees: shippingFeeTnd,
-          delivery_status: "prepared",
+          delivery_status: "en_attente",
         };
         // Colonnes absentes de la table (avant migration SQL) : retry avec les colonnes existantes
         const insertDelivery = async (payload: Record<string, any>) => {
