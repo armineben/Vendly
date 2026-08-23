@@ -59,6 +59,7 @@ function AuthenticatedLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [menuOpen, setMenuOpen] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [displayName, setDisplayName] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useLowStockAlerts(isAdmin);
@@ -85,10 +86,13 @@ function AuthenticatedLayout() {
     if (!user?.id) return;
     supabase
       .from("profiles")
-      .select("avatar_url")
+      .select("avatar_url, display_name")
       .eq("id", user.id)
       .maybeSingle()
-      .then(({ data }) => setAvatarUrl(data?.avatar_url ?? null));
+      .then(({ data }) => {
+        setAvatarUrl(data?.avatar_url ?? null);
+        setDisplayName(data?.display_name ?? null);
+      });
   }, [user?.id]);
 
   useEffect(() => {
@@ -182,16 +186,18 @@ function AuthenticatedLayout() {
                 )}
               </div>
               <span className="hidden sm:block text-xs font-semibold text-zinc-700 max-w-[120px] truncate">
-                {user.email?.split("@")[0]}
+                {displayName || user.email?.split("@")[0] || "Utilisateur"}
               </span>
               <ChevronDown className="h-3 w-3 text-zinc-400" />
             </button>
             {/* Dropdown */}
             <div className="absolute right-0 top-full mt-2 w-56 rounded-2xl border border-zinc-200 bg-white shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 p-2 z-50">
               <div className="px-3 py-2 mb-1 border-b border-zinc-100">
-                <p className="text-xs font-semibold text-zinc-700 truncate">{user.email}</p>
+                <p className="text-xs font-bold text-zinc-800 truncate">
+                  {displayName || user.email || "Utilisateur"}
+                </p>
                 <span className="inline-flex items-center rounded-full bg-zinc-800 text-white px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest mt-1">
-                  {role === "admin" ? "Admin" : "Vendeur"}
+                  {isAdmin ? "Manager Boutique" : "Vendeur"}
                 </span>
               </div>
               <Link to="/profil" className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium text-zinc-600 hover:bg-zinc-50 transition-colors">
