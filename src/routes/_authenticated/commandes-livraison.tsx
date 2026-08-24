@@ -527,7 +527,7 @@ function CommandesLivraisonPage() {
           <table className="w-full text-sm border-collapse table-auto">
             <thead className="border-b border-border bg-secondary/50 text-left text-xs uppercase tracking-wider font-semibold text-muted-foreground">
               <tr>
-                {isAdmin && <th className="px-3 py-3 w-8"><input type="checkbox" onChange={(e) => { if (e.target.checked) setSelectedIds(new Set(filtered.filter((c: any) => c.delivery_status === "delivered").map((c: any) => c.id))); else setSelectedIds(new Set()); }} checked={selectedIds.size > 0 && filtered.filter((c: any) => c.delivery_status === "delivered").every((c: any) => selectedIds.has(c.id))} className="accent-black" /></th>}
+                {isAdmin && <th className="px-3 py-3 w-8"><input type="checkbox" onChange={(e) => { if (e.target.checked) setSelectedIds(new Set(filtered.map((c: any) => c.id))); else setSelectedIds(new Set()); }} checked={selectedIds.size > 0 && filtered.every((c: any) => selectedIds.has(c.id))} className="accent-black" /></th>}
                 <th className="px-3 py-3">Statut</th>
                 <th className="px-3 py-3">Client</th>
                 <th className="px-3 py-3">Adresse</th>
@@ -547,9 +547,7 @@ function CommandesLivraisonPage() {
                   <tr key={c.id} className="hover:bg-secondary/30 transition-colors">
                     {isAdmin && (
                       <td className="px-3 py-3">
-                        {c.delivery_status === "delivered" ? (
-                          <input type="checkbox" checked={selectedIds.has(c.id)} onChange={() => setSelectedIds((prev) => { const next = new Set(prev); if (next.has(c.id)) next.delete(c.id); else next.add(c.id); return next; })} className="accent-black" />
-                        ) : null}
+                        <input type="checkbox" checked={selectedIds.has(c.id)} onChange={() => setSelectedIds((prev) => { const next = new Set(prev); if (next.has(c.id)) next.delete(c.id); else next.add(c.id); return next; })} className="accent-black" />
                       </td>
                     )}
                     <td className="px-3 py-3">
