@@ -58,6 +58,7 @@ function CaissePage() {
     `TICKET-${Date.now().toString(36).toUpperCase()}${Math.floor(Math.random() * 90 + 10)}`,
   );
   const [pendingCarts, setPendingCarts] = useState<any[]>([]);
+  const [pendingOpen, setPendingOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -592,9 +593,25 @@ function CaissePage() {
 
   return (
     <div className="mx-auto max-w-[1600px] space-y-6 p-6 lg:p-10 bg-[#fbfbfa] min-h-screen print:hidden">
-      <header className="print:hidden">
-        <p className="text-xs uppercase tracking-[0.3em] text-[#747878] font-bold">Back-office</p>
-        <h1 className="mt-1 font-display text-3xl font-extrabold tracking-tight text-black">Caisse (POS)</h1>
+      <header className="print:hidden flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <p className="text-xs uppercase tracking-[0.3em] text-[#747878] font-bold">Back-office</p>
+          <h1 className="mt-1 font-display text-3xl font-extrabold tracking-tight text-black">Caisse (POS)</h1>
+        </div>
+        <button
+          onClick={() => {
+            loadPendingCarts();
+            setPendingOpen(true);
+          }}
+          className="relative flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-700 hover:border-black transition-colors shadow-xs"
+        >
+          <ShoppingCart className="w-4 h-4" /> Paniers
+          {pendingCarts.length > 0 && (
+            <span className="absolute -top-1.5 -right-1.5 bg-black text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-bold">
+              {pendingCarts.length}
+            </span>
+          )}
+        </button>
       </header>
 
       <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
@@ -953,6 +970,41 @@ function CaissePage() {
           </div>
         )}
       </div>
+
+      {/* ─── MODALE PANIERS EN ATTENTE ─── */}
+      {pendingOpen && (
+        <div className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-start justify-center overflow-y-auto p-4" onClick={() => setPendingOpen(false)}>
+          <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-6 my-8" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-bold text-[#091426]">
+                Paniers en attente ({pendingCarts.length})
+              </h2>
+              <button onClick={() => setPendingOpen(false)} className="text-slate-400 hover:text-black"><X className="w-4 h-4" /></button>
+            </div>
+            {pendingCarts.length === 0 ? (
+              <p className="py-8 text-center text-sm text-slate-400">Aucun panier en attente.</p>
+            ) : (
+              <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+                {pendingCarts.map((pc) => (
+                  <div key={pc.id} className="border border-slate-200 rounded-xl p-3 flex items-center justify-between gap-2 hover:border-black transition-colors">
+                    <button onClick={() => { loadPendingCart(pc); setPendingOpen(false); }} className="flex-1 min-w-0 text-left">
+                      <p className="text-sm font-bold text-slate-800">{pc.ticket_number}</p>
+                      <p className="text-[10px] text-slate-400">
+                        {new Date(pc.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                        {" · "}{Array.isArray(pc.items) ? pc.items.length : 0} article(s)
+                        {" · "}{formatCurrency(Number(pc.total || 0))}
+                      </p>
+                    </button>
+                    <button onClick={() => deletePendingCart(pc.id)} className="text-slate-300 hover:text-red-500 shrink-0">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ─── MODALE RÉSERVATION ─── */}
       {resOpen && (

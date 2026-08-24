@@ -1214,6 +1214,29 @@ function Catalogue() {
         </div>
       </header>
 
+      {/* BARRE PANIER (en haut) */}
+      {selectedForPos.length > 0 && (
+        <div className="bg-black text-white px-6 py-3 flex items-center justify-between gap-4">
+          <span className="text-xs font-bold uppercase tracking-widest">
+            🛒 Panier : {selectedForPos.length} article{selectedForPos.length > 1 ? "s" : ""} sélectionné{selectedForPos.length > 1 ? "s" : ""}
+          </span>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSelectedForPos([])}
+              className="text-xs text-white/70 hover:text-white uppercase tracking-widest"
+            >
+              Vider
+            </button>
+            <button
+              onClick={sendToPos}
+              className="bg-white text-black text-xs font-bold uppercase tracking-widest px-5 py-2 rounded-full hover:bg-gray-200 transition-colors"
+            >
+              Valider le panier →
+            </button>
+          </div>
+        </div>
+      )}
+
       <AnnouncementBanner />
 
       {/* BANNIÈRE STYLE SHOP */}
