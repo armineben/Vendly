@@ -44,11 +44,55 @@ function PieEmpty() {
   );
 }
 
+// ── DONNÉES DE DÉMONSTRATION (mode démo) ─────────────────────
+const DEMO_LINE = Array.from({ length: 14 }, (_, i) => {
+  const day = new Date(Date.now() - (13 - i) * 86400000);
+  const label = `${String(day.getDate()).padStart(2, "0")}/${String(day.getMonth() + 1).padStart(2, "0")}`;
+  const base = 900 + i * 65 + Math.sin(i * 1.7) * 90;
+  return {
+    day: label,
+    "Chiffre d'Affaires": Math.round(base),
+    "Pièces Vendues": Math.round(14 + i * 1.4 + Math.cos(i * 1.3) * 3),
+  };
+});
+const DEMO_BAR = [
+  { name: "Mode Femme", volume: 84 },
+  { name: "Mode Homme", volume: 62 },
+  { name: "Accessoires", volume: 48 },
+  { name: "Chaussures", volume: 35 },
+  { name: "Mode Enfant", volume: 29 },
+  { name: "Parfums", volume: 22 },
+];
+const DEMO_PAYMENT = [
+  { name: "Espèces / COD", value: 6520 },
+  { name: "Carte bancaire", value: 2580 },
+  { name: "e-Dinar", value: 1240 },
+];
+const DEMO_FUNNEL = [
+  { label: "Visiteurs", value: 1250, pct: 100 },
+  { label: "Paniers", value: 340, pct: 27 },
+  { label: "Commandes", value: 195, pct: 16 },
+  { label: "Livrés", value: 172, pct: 14 },
+];
+
 function DashboardPage() {
   const { isAdmin, user } = useAuth();
   const qc = useQueryClient();
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [demoMode, setDemoMode] = useState(
+    () => localStorage.getItem("vendly_demo_mode") === "1",
+  );
+
+  const toggleDemo = () => {
+    setDemoMode((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("vendly_demo_mode", next ? "1" : "0");
+      } catch {}
+      return next;
+    });
+  };
 
   const { data: profile } = useQuery({
     queryKey: ["user-profile", user?.id],
@@ -212,6 +256,16 @@ function DashboardPage() {
   const conversionRate =
     visitsCount > 0 ? ((salesCount / visitsCount) * 100).toFixed(1) : "0";
 
+  // ── Valeurs démo pour les KPIs (mode démo) ───────────────────
+  const demoClients = 240;
+  const demoNewsletter = 158;
+  const demoVisits = 1250;
+  const demoConversion = "15.6";
+  const kpiClients = demoMode ? demoClients : clientsCount;
+  const kpiNewsletter = demoMode ? demoNewsletter : newsletterCount;
+  const kpiVisits = demoMode ? demoVisits : visitsCount;
+  const kpiConversion = demoMode ? demoConversion : conversionRate;
+
   // ── SAV : Retours & Remboursements ──────────────────────────
   const { data: returns = [] } = useQuery({
     queryKey: ["kpi-returns"],
@@ -277,11 +331,13 @@ function DashboardPage() {
       }
     }
   });
-  const lineData = Array.from(dayMap.entries()).map(([d, v]) => ({
-    day: d.slice(5).replace("-", "/"),
-    "Chiffre d'Affaires": v.total,
-    "Pièces Vendues": v.pieces
-  }));
+  const lineData = demoMode || dayMap.size === 0
+    ? DEMO_LINE
+    : Array.from(dayMap.entries()).map(([d, v]) => ({
+        day: d.slice(5).replace("-", "/"),
+        "Chiffre d'Affaires": v.total,
+        "Pièces Vendues": v.pieces
+      }));
 
   const catMap = new Map<string, number>();
   sales.forEach((s: any) => {
@@ -304,7 +360,9 @@ function DashboardPage() {
             : "En ligne";
     payMap.set(label, (payMap.get(label) || 0) + Number(s.total || 0));
   });
-  const paymentData = Array.from(payMap.entries()).map(([name, value]) => ({ name, value }));
+  const paymentData = demoMode || payMap.size === 0
+    ? DEMO_PAYMENT
+    : Array.from(payMap.entries()).map(([name, value]) => ({ name, value }));
 
   // ── Volume par catégorie (Bar) ───────────────────────────────
   const catVolMap = new Map<string, number>();
@@ -312,10 +370,12 @@ function DashboardPage() {
     const cat = s.articles?.categorie || "Autre";
     catVolMap.set(cat, (catVolMap.get(cat) || 0) + Number(s.quantite || 0));
   });
-  const barData = Array.from(catVolMap.entries())
-    .map(([name, volume]) => ({ name, volume }))
-    .sort((a, b) => b.volume - a.volume)
-    .slice(0, 8);
+  const barData = demoMode || catVolMap.size === 0
+    ? DEMO_BAR
+    : Array.from(catVolMap.entries())
+        .map(([name, volume]) => ({ name, volume }))
+        .sort((a, b) => b.volume - a.volume)
+        .slice(0, 8);
 
   // ── Tunnel de conversion ─────────────────────────────────────
   const deliveredCount = deliveries.filter(
@@ -323,11 +383,13 @@ function DashboardPage() {
   ).length;
   const pctOf = (v: number) =>
     visitsCount > 0 ? Math.round((v / visitsCount) * 100) : 0;
-  const funnel = [
-    { label: "Visiteurs", value: visitsCount, pct: 100 },
-    { label: "Paniers", value: pendingCartsCount, pct: pctOf(pendingCartsCount) },
-    { label: "Commandes", value: salesCount, pct: pctOf(salesCount) },
-    { label: "Livrés", value: deliveredCount, pct: pctOf(deliveredCount) },
+  const funnel = demoMode
+    ? DEMO_FUNNEL
+    : [
+        { label: "Visiteurs", value: visitsCount, pct: 100 },
+        { label: "Paniers", value: pendingCartsCount, pct: pctOf(pendingCartsCount) },
+        { label: "Commandes", value: salesCount, pct: pctOf(salesCount) },
+        { label: "Livrés", value: deliveredCount, pct: pctOf(deliveredCount) },
   ];
 
   const articleMapTop = new Map(articles.map(a => [a.id, a]));
@@ -358,6 +420,25 @@ function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-[1440px] p-4 md:p-6 lg:p-8 space-y-6">
+      {/* ─── BARRE TOP : TITRE + MODE DÉMO ─── */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-xs uppercase tracking-[0.3em] text-[#747878] font-bold">Back-office</p>
+          <h1 className="mt-1 font-display text-3xl font-extrabold tracking-tight text-black">Tableau de bord</h1>
+        </div>
+        <button
+          onClick={toggleDemo}
+          className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-all ${
+            demoMode
+              ? "bg-black text-white shadow-md"
+              : "bg-white text-zinc-500 border border-zinc-200 hover:border-zinc-400"
+          }`}
+        >
+          <Sparkles className={`w-3.5 h-3.5 ${demoMode ? "text-amber-300" : ""}`} />
+          {demoMode ? "Mode Démo : actif" : "Activer le mode démo"}
+        </button>
+      </div>
+
       {/* ─── TOP ROW: BENTO PROFILE CARD + KPI GRID ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
         {/* Profile Card (Lora Piterson style) */}
@@ -556,7 +637,7 @@ function DashboardPage() {
               </div>
             </div>
             <div className="mt-4">
-              <p className="text-2xl font-black text-zinc-800 tracking-tight">{clientsCount}</p>
+              <p className="text-2xl font-black text-zinc-800 tracking-tight">{kpiClients}</p>
               <span className="inline-flex items-center gap-0.5 mt-1 text-xs font-semibold text-zinc-400">profils enregistrés</span>
             </div>
           </div>
@@ -569,7 +650,7 @@ function DashboardPage() {
               </div>
             </div>
             <div className="mt-4">
-              <p className="text-2xl font-black text-zinc-800 tracking-tight">{newsletterCount}</p>
+              <p className="text-2xl font-black text-zinc-800 tracking-tight">{kpiNewsletter}</p>
               <span className="inline-flex items-center gap-0.5 mt-1 text-xs font-semibold text-zinc-400">inscriptions</span>
             </div>
           </div>
@@ -582,7 +663,7 @@ function DashboardPage() {
               </div>
             </div>
             <div className="mt-4">
-              <p className="text-2xl font-black text-zinc-800 tracking-tight">{visitsCount}</p>
+              <p className="text-2xl font-black text-zinc-800 tracking-tight">{kpiVisits}</p>
               <span className="inline-flex items-center gap-0.5 mt-1 text-xs font-semibold text-zinc-400">sessions enregistrées</span>
             </div>
           </div>
@@ -595,9 +676,9 @@ function DashboardPage() {
               </div>
             </div>
             <div className="mt-4">
-              <p className="text-2xl font-black text-zinc-800 tracking-tight">{conversionRate}%</p>
+              <p className="text-2xl font-black text-zinc-800 tracking-tight">{kpiConversion}%</p>
               <span className="inline-flex items-center gap-0.5 mt-1 text-xs font-semibold text-zinc-400">
-                {salesCount} vente{salesCount > 1 ? "s" : ""} / {visitsCount} visite{visitsCount > 1 ? "s" : ""}
+                {demoMode ? "195 ventes / 1250 visites" : `${salesCount} vente${salesCount > 1 ? "s" : ""} / ${visitsCount} visite${visitsCount > 1 ? "s" : ""}`}
               </span>
             </div>
           </div>
