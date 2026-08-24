@@ -1192,7 +1192,7 @@ function Catalogue() {
                         try {
                           const { error } = await supabase
                             .from("pending_carts")
-                            .insert([{ ticket_number: ticket, items, total: cartTotal }]);
+                            .insert([{ ticket_number: ticket, items, total: cartTotal, created_by: user?.id || null }]);
                           if (error) throw error;
                           toast.success(`Panier ${ticket} mis en attente.`);
                           setCart([]);

@@ -99,12 +99,16 @@ function ReservationsPage() {
   const [dureeReservation, setDureeReservation] = useState("48");
 
   const { data: reservations = [] } = useQuery({
-    queryKey: ["reservations"],
+    queryKey: ["reservations", isAdmin ? "all" : user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("reservations")
         .select("*, articles(reference, designation, prix_vente, prix_achat, image, images)")
         .order("created_at", { ascending: false });
+      if (!isAdmin) {
+        query = query.or(`created_by.is.null,created_by.eq.${user?.id ?? "00000000-0000-0000-0000-000000000000"}`);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return data ?? [];
     },

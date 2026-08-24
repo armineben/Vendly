@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -53,6 +54,7 @@ type SortKey = "alpha_asc" | "alpha_desc" | "price_asc" | "price_desc" | "new" |
 function CaissePage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const { user, isAdmin } = useAuth();
   const [cart, setCart] = useState<PosItem[]>([]);
   const [ticketNumber, setTicketNumber] = useState(() =>
     `TICKET-${Date.now().toString(36).toUpperCase()}${Math.floor(Math.random() * 90 + 10)}`,
@@ -127,10 +129,15 @@ function CaissePage() {
 
   // Charger les paniers en attente
   const loadPendingCarts = async () => {
-    const { data } = await supabase
+    let query = supabase
       .from("pending_carts")
       .select("*")
       .order("created_at", { ascending: false });
+    // Un vendeur ne voit que ses paniers (+ globaux) ; l'admin voit tout
+    if (!isAdmin) {
+      query = query.or(`created_by.is.null,created_by.eq.${user?.id ?? "00000000-0000-0000-0000-000000000000"}`);
+    }
+    const { data } = await query;
     setPendingCarts(data ?? []);
   };
   useEffect(() => {
@@ -148,6 +155,7 @@ function CaissePage() {
           ticket_number: ticketNumber,
           items: cart,
           total,
+          created_by: user?.id || null,
         },
       ]);
       if (error) throw error;
@@ -484,6 +492,7 @@ function CaissePage() {
         duree_heures: heures,
         delay_type: resDelay,
         statut: "en_attente",
+        created_by: user?.id || null,
       };
 
       // Numéro de réservation séquentiel (RES-0001, ...)

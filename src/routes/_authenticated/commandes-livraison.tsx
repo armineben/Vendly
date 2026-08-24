@@ -64,12 +64,17 @@ function CommandesLivraisonPage() {
   // ── Queries ──────────────────────────────────────────────────
 
   const { data: commandes = [] } = useQuery({
-    queryKey: ["commandes-livraison-v2"],
+    queryKey: ["commandes-livraison-v2", isAdmin ? "all" : user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("commandes_livraison")
         .select("*")
         .order("created_at", { ascending: false });
+      // Un vendeur ne voit que ses livraisons (+ globales) ; l'admin voit tout
+      if (!isAdmin) {
+        query = query.or(`created_by.is.null,created_by.eq.${user?.id ?? "00000000-0000-0000-0000-000000000000"}`);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return data ?? [];
     },
