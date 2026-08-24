@@ -530,6 +530,16 @@ function ShopPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
+
+  // Compteur de visites (une fois par session)
+  useEffect(() => {
+    try {
+      const key = "vendly_visited";
+      if (localStorage.getItem(key)) return;
+      localStorage.setItem(key, "1");
+      supabase.rpc("increment_site_visits").catch(() => {});
+    } catch {}
+  }, []);
   const [favorites, setFavorites] = useState<string[]>(() => {
     try {
       const stored = localStorage.getItem("vendly-favorites");

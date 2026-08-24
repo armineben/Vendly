@@ -8,7 +8,7 @@ import {
 import {
   TrendingUp, Wallet, ShoppingBag, Receipt,
   AlertTriangle, Users, Calendar, ArrowUpRight, ArrowDownRight,
-  Sparkles, Clock, Package, Camera, Loader2,
+  Sparkles, Clock, Package, Camera, Loader2, Mail, Eye,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -138,6 +138,48 @@ function DashboardPage() {
       return data ?? [];
     },
   });
+
+  // ── Marketing & Audience ────────────────────────────────────
+  const { data: clientsCount = 0 } = useQuery({
+    queryKey: ["kpi-clients"],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("profiles")
+        .select("*", { count: "exact", head: true });
+      return count ?? 0;
+    },
+  });
+  const { data: newsletterCount = 0 } = useQuery({
+    queryKey: ["kpi-newsletter"],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("newsletter_subscribers")
+        .select("*", { count: "exact", head: true });
+      return count ?? 0;
+    },
+  });
+  const { data: visitsCount = 0 } = useQuery({
+    queryKey: ["kpi-visits"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("site_visits")
+        .select("count")
+        .eq("id", 1)
+        .single();
+      return Number(data?.count ?? 0);
+    },
+  });
+  const { data: salesCount = 0 } = useQuery({
+    queryKey: ["kpi-sales-count"],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("sales")
+        .select("*", { count: "exact", head: true });
+      return count ?? 0;
+    },
+  });
+  const conversionRate =
+    visitsCount > 0 ? ((salesCount / visitsCount) * 100).toFixed(1) : "0";
 
   const salesToday = sales.filter(s => s.created_at && new Date(s.created_at) >= todayStart);
   const salesYesterday = sales.filter(s => s.created_at && new Date(s.created_at) >= yesterdayStart && new Date(s.created_at) < todayStart);
@@ -411,6 +453,68 @@ function DashboardPage() {
               </div>
             </>
           )}
+        </div>
+      </div>
+
+      {/* ─── MARKETING & AUDIENCE ─── */}
+      <div>
+        <h3 className="font-bold text-zinc-800 mb-4 flex items-center gap-2">
+          <TrendingUp className="h-4 w-4" /> Marketing & Audience
+        </h3>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="rounded-3xl bg-white p-5 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] uppercase tracking-wider font-bold text-zinc-400">Clients inscrits</span>
+              <div className="p-2 rounded-xl bg-indigo-50 text-indigo-600">
+                <Users className="h-4 w-4" />
+              </div>
+            </div>
+            <div className="mt-4">
+              <p className="text-2xl font-black text-zinc-800 tracking-tight">{clientsCount}</p>
+              <span className="inline-flex items-center gap-0.5 mt-1 text-xs font-semibold text-zinc-400">profils enregistrés</span>
+            </div>
+          </div>
+
+          <div className="rounded-3xl bg-white p-5 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] uppercase tracking-wider font-bold text-zinc-400">Newsletter</span>
+              <div className="p-2 rounded-xl bg-pink-50 text-pink-600">
+                <Mail className="h-4 w-4" />
+              </div>
+            </div>
+            <div className="mt-4">
+              <p className="text-2xl font-black text-zinc-800 tracking-tight">{newsletterCount}</p>
+              <span className="inline-flex items-center gap-0.5 mt-1 text-xs font-semibold text-zinc-400">inscriptions</span>
+            </div>
+          </div>
+
+          <div className="rounded-3xl bg-white p-5 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] uppercase tracking-wider font-bold text-zinc-400">Visites boutique</span>
+              <div className="p-2 rounded-xl bg-cyan-50 text-cyan-600">
+                <Eye className="h-4 w-4" />
+              </div>
+            </div>
+            <div className="mt-4">
+              <p className="text-2xl font-black text-zinc-800 tracking-tight">{visitsCount}</p>
+              <span className="inline-flex items-center gap-0.5 mt-1 text-xs font-semibold text-zinc-400">sessions enregistrées</span>
+            </div>
+          </div>
+
+          <div className="rounded-3xl bg-white p-5 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] uppercase tracking-wider font-bold text-zinc-400">Conversion</span>
+              <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600">
+                <TrendingUp className="h-4 w-4" />
+              </div>
+            </div>
+            <div className="mt-4">
+              <p className="text-2xl font-black text-zinc-800 tracking-tight">{conversionRate}%</p>
+              <span className="inline-flex items-center gap-0.5 mt-1 text-xs font-semibold text-zinc-400">
+                {salesCount} vente{salesCount > 1 ? "s" : ""} / {visitsCount} visite{visitsCount > 1 ? "s" : ""}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
