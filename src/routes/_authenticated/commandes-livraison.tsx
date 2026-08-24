@@ -135,11 +135,44 @@ function CommandesLivraisonPage() {
 
   const updateStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const { error } = await supabase.rpc("update_delivery_status", { p_id: id, p_status: status });
+      // Si marquée "paid" (fonds reçus) : récupérer la commande pour créer la vente
+      let commande: any = null;
+      if (status === "paid") {
+        const { data } = await supabase
+          .from("commandes_livraison")
+          .select("*")
+          .eq("id", id)
+          .single();
+        commande = data;
+      }
+
+      const { error } = await supabase.rpc("update_delivery_status", {
+        p_id: id,
+        p_status: status,
+      });
       if (error) throw error;
+
+      // Fonds reçus de la société de livraison → enregistrer la vente dans sales
+      if (commande) {
+        const items = Array.isArray(commande.items) ? commande.items : [];
+        const { error: saleError } = await supabase.from("sales").insert([
+          {
+            items,
+            total: Number(commande.total_price || 0),
+            customer_name:
+              `${commande.client_firstname || ""} ${commande.client_lastname || ""}`.trim() ||
+              "Client livraison",
+            customer_phone: commande.client_phone || "",
+            payment_method: commande.payment_method || "especes",
+            statut: "validee",
+          },
+        ]);
+        if (saleError && saleError.code !== "42703") throw saleError;
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["commandes-livraison-v2"] });
+      qc.invalidateQueries({ queryKey: ["sales"] });
       toast.success("Statut mis à jour");
     },
     onError: (e: any) => toast.error(e.message),
@@ -150,14 +183,39 @@ function CommandesLivraisonPage() {
       const ids = Array.from(selectedIds);
       if (ids.length === 0) throw new Error("Aucune commande sélectionnée");
       for (const id of ids) {
-        const { error } = await supabase.rpc("update_delivery_status", { p_id: id, p_status: "paid" });
+        const { data } = await supabase
+          .from("commandes_livraison")
+          .select("*")
+          .eq("id", id)
+          .single();
+        const { error } = await supabase.rpc("update_delivery_status", {
+          p_id: id,
+          p_status: "paid",
+        });
         if (error) throw error;
+        if (data) {
+          const items = Array.isArray(data.items) ? data.items : [];
+          const { error: saleError } = await supabase.from("sales").insert([
+            {
+              items,
+              total: Number(data.total_price || 0),
+              customer_name:
+                `${data.client_firstname || ""} ${data.client_lastname || ""}`.trim() ||
+                "Client livraison",
+              customer_phone: data.client_phone || "",
+              payment_method: data.payment_method || "especes",
+              statut: "validee",
+            },
+          ]);
+          if (saleError && saleError.code !== "42703") throw saleError;
+        }
       }
     },
     onSuccess: () => {
       toast.success(`${selectedIds.size} commande(s) marquée(s) payée(s)`);
       setSelectedIds(new Set());
       qc.invalidateQueries({ queryKey: ["commandes-livraison-v2"] });
+      qc.invalidateQueries({ queryKey: ["sales"] });
       qc.invalidateQueries({ queryKey: ["dashboard-sales"] });
     },
     onError: (e: any) => toast.error(e.message),

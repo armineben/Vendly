@@ -473,11 +473,31 @@ BEGIN
 END;
 $$;
 
--- RPC : mise à jour statut livraison
+-- RPC : mise à jour statut livraison (crée la vente si marquée payée)
 CREATE OR REPLACE FUNCTION public.update_delivery_status(p_id uuid, p_status text)
 RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_commandes record;
+  v_items jsonb;
 BEGIN
+  -- Récupérer la commande avant mise à jour
+  SELECT * INTO v_commandes FROM public.commandes_livraison WHERE id = p_id;
+
   UPDATE public.commandes_livraison SET delivery_status = p_status WHERE id = p_id;
+
+  -- Si le nouveau statut est "paid", créer la vente correspondante
+  IF p_status = 'paid' AND v_commandes.id IS NOT NULL THEN
+    v_items := COALESCE(v_commandes.items, '[]'::jsonb);
+    INSERT INTO public.sales (items, total, customer_name, customer_phone, payment_method, statut)
+    VALUES (
+      v_items,
+      COALESCE(v_commandes.total_price, 0),
+      TRIM(COALESCE(v_commandes.client_firstname, '') || ' ' || COALESCE(v_commandes.client_lastname, '')),
+      v_commandes.client_phone,
+      COALESCE(v_commandes.payment_method, 'especes'),
+      'validee'
+    );
+  END IF;
 END;
 $$;
 
