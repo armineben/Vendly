@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import {
   CartesianGrid, Cell, Line, LineChart, Pie, PieChart,
-  ResponsiveContainer, Tooltip, XAxis, YAxis, Legend
+  Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend,
 } from "recharts";
 import {
   TrendingUp, Wallet, ShoppingBag, Receipt,
@@ -21,6 +21,28 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 });
 
 const COLORS = ["#18181b", "#3f3f46", "#52525b", "#a1a1aa", "#d4d4d8"];
+const PAY_COLORS = ["#18181b", "#3f3f46", "#52525b", "#a1a1aa"];
+
+function BarChartEmpty() {
+  return (
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="opacity-40">
+      <path d="M3 3v16a2 2 0 0 0 2 2h16" />
+      <path d="M7 16v-4" />
+      <path d="M11 16V8" />
+      <path d="M15 16v-2" />
+      <path d="M19 16v-6" />
+    </svg>
+  );
+}
+
+function PieEmpty() {
+  return (
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="opacity-40">
+      <path d="M21.2 15.89A10 10 0 1 1 8 2.83" />
+      <path d="M22 12A10 10 0 0 0 12 2v10z" />
+    </svg>
+  );
+}
 
 function DashboardPage() {
   const { isAdmin, user } = useAuth();
@@ -169,6 +191,15 @@ function DashboardPage() {
       return Number(data?.count ?? 0);
     },
   });
+  const { data: pendingCartsCount = 0 } = useQuery({
+    queryKey: ["kpi-pending-carts"],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("pending_carts")
+        .select("*", { count: "exact", head: true });
+      return count ?? 0;
+    },
+  });
   const { data: salesCount = 0 } = useQuery({
     queryKey: ["kpi-sales-count"],
     queryFn: async () => {
@@ -258,6 +289,46 @@ function DashboardPage() {
     catMap.set(categoryName, (catMap.get(categoryName) || 0) + Number(s.total || 0));
   });
   const pieData = Array.from(catMap.entries()).map(([name, value]) => ({ name, value }));
+
+  // ── Modes de paiement (Donut) ────────────────────────────────
+  const payMap = new Map<string, number>();
+  sales.forEach((s: any) => {
+    const m = (s.payment_method || "especes").toLowerCase();
+    const label =
+      m === "cod" || m === "especes"
+        ? "Espèces / COD"
+        : m === "card"
+          ? "Carte bancaire"
+          : m === "e-dinar" || m === "edinar"
+            ? "e-Dinar"
+            : "En ligne";
+    payMap.set(label, (payMap.get(label) || 0) + Number(s.total || 0));
+  });
+  const paymentData = Array.from(payMap.entries()).map(([name, value]) => ({ name, value }));
+
+  // ── Volume par catégorie (Bar) ───────────────────────────────
+  const catVolMap = new Map<string, number>();
+  sales.forEach((s: any) => {
+    const cat = s.articles?.categorie || "Autre";
+    catVolMap.set(cat, (catVolMap.get(cat) || 0) + Number(s.quantite || 0));
+  });
+  const barData = Array.from(catVolMap.entries())
+    .map(([name, volume]) => ({ name, volume }))
+    .sort((a, b) => b.volume - a.volume)
+    .slice(0, 8);
+
+  // ── Tunnel de conversion ─────────────────────────────────────
+  const deliveredCount = deliveries.filter(
+    (d: any) => d.delivery_status === "delivered",
+  ).length;
+  const pctOf = (v: number) =>
+    visitsCount > 0 ? Math.round((v / visitsCount) * 100) : 0;
+  const funnel = [
+    { label: "Visiteurs", value: visitsCount, pct: 100 },
+    { label: "Paniers", value: pendingCartsCount, pct: pctOf(pendingCartsCount) },
+    { label: "Commandes", value: salesCount, pct: pctOf(salesCount) },
+    { label: "Livrés", value: deliveredCount, pct: pctOf(deliveredCount) },
+  ];
 
   const articleMapTop = new Map(articles.map(a => [a.id, a]));
   const aggTop = new Map<string, { qty: number; ca: number }>();
@@ -606,35 +677,106 @@ function DashboardPage() {
           </div>
         </div>
 
-        {/* Pie Chart (1 col) */}
+        {/* Bar Chart - Par catégorie (1 col) */}
         <div className="rounded-3xl bg-white p-6 shadow-sm flex flex-col justify-between">
           <div>
             <h3 className="font-bold text-zinc-800">Par catégorie</h3>
-            <p className="text-xs text-zinc-400 mt-1">Volume financier par typologie</p>
+            <p className="text-xs text-zinc-400 mt-1">Volume (pièces) par typologie</p>
           </div>
-          <div className="h-56 flex items-center justify-center relative mt-2">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={65} outerRadius={85} paddingAngle={4}>
-                  {pieData.map((_, i) => (
-                    <Cell key={`cell-${i}`} fill={COLORS[i % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="absolute text-center">
-              <p className="text-xs text-zinc-400 font-medium">CA 14 jours</p>
-              <p className="text-lg font-bold text-zinc-800">{formatCurrency(caJour)}</p>
+          <div className="h-56 mt-2">
+            {barData.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-zinc-300">
+                <BarChartEmpty />
+                <p className="text-xs mt-2">Aucune donnée</p>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={barData} layout="vertical" margin={{ left: 8, right: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f4f4f5" />
+                  <XAxis type="number" axisLine={false} tickLine={false} stroke="#a1a1aa" fontSize={11} />
+                  <YAxis type="category" dataKey="name" width={90} axisLine={false} tickLine={false} stroke="#18181b" fontSize={11} />
+                  <Tooltip contentStyle={{ borderRadius: "12px", border: "1px solid #e4e4e7" }} cursor={{ fill: "#fafafa" }} />
+                  <Bar dataKey="volume" fill="#18181b" radius={[0, 6, 6, 0]} barSize={16} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ─── ROW 2 : MODES DE PAIEMENT + TUNNEL ─── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Donut - Modes de paiement */}
+        <div className="rounded-3xl bg-white p-6 shadow-sm flex flex-col justify-between">
+          <div>
+            <h3 className="font-bold text-zinc-800">Modes de paiement</h3>
+            <p className="text-xs text-zinc-400 mt-1">Répartition du CA</p>
+          </div>
+          <div className="h-52 flex items-center justify-center relative mt-2">
+            {paymentData.length === 0 ? (
+              <div className="text-zinc-300 flex flex-col items-center">
+                <PieEmpty />
+                <p className="text-xs mt-2">Aucune donnée</p>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={paymentData} dataKey="value" nameKey="name" innerRadius={55} outerRadius={75} paddingAngle={4}>
+                    {paymentData.map((_, i) => (
+                      <Cell key={`pc-${i}`} fill={PAY_COLORS[i % PAY_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ borderRadius: "12px", border: "1px solid #e4e4e7" }} />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+            <div className="absolute text-center pointer-events-none">
+              <p className="text-[10px] text-zinc-400 font-medium">CA total</p>
+              <p className="text-base font-bold text-zinc-800">{formatCurrency(sales.reduce((s, r) => s + Number(r.total || 0), 0))}</p>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-2 mt-4 text-[11px] text-zinc-500 font-medium">
-            {pieData.slice(0, 4).map((item, idx) => (
-              <div key={item.name} className="flex items-center gap-1.5 truncate">
-                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
-                <span className="truncate">{item.name}</span>
-              </div>
-            ))}
+          <div className="grid grid-cols-1 gap-1.5 mt-3 text-[11px] text-zinc-500 font-medium">
+            {paymentData.length === 0 ? (
+              <span className="text-zinc-300">—</span>
+            ) : (
+              paymentData.map((item, idx) => (
+                <div key={item.name} className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: PAY_COLORS[idx % PAY_COLORS.length] }} />
+                  <span className="truncate flex-1">{item.name}</span>
+                  <span className="text-zinc-700">{formatCurrency(item.value)}</span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Funnel - Tunnel de conversion */}
+        <div className="lg:col-span-2 rounded-3xl bg-white p-6 shadow-sm">
+          <h3 className="font-bold text-zinc-800">Tunnel de conversion</h3>
+          <p className="text-xs text-zinc-400 mt-1">Visiteurs → Paniers → Commandes → Livrés</p>
+          <div className="mt-6 space-y-3">
+            {funnel.map((step, i) => {
+              const widthPct = step.pct;
+              return (
+                <div key={step.label} className="flex items-center gap-3">
+                  <div className="w-24 shrink-0 flex items-center gap-1.5">
+                    <span className={`w-2 h-2 rounded-full ${widthPct > 0 ? "bg-[#18181b]" : "bg-zinc-200"}`} />
+                    <span className="text-[11px] font-semibold text-zinc-600 uppercase tracking-wide">{step.label}</span>
+                  </div>
+                  <div className="flex-1 h-8 rounded-lg bg-zinc-100 overflow-hidden relative">
+                    <div
+                      className={`h-full rounded-lg transition-all duration-500 ${
+                        widthPct > 0 ? "bg-gradient-to-r from-zinc-800 to-zinc-500" : "bg-zinc-200"
+                      }`}
+                      style={{ width: `${Math.max(widthPct, widthPct > 0 ? 4 : 0)}%` }}
+                    />
+                    <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-zinc-600">
+                      {step.value} · {step.pct}%
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
