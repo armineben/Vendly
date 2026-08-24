@@ -98,15 +98,15 @@ function VentesPage() {
                   <td className="px-4 py-3 text-muted-foreground">{formatDateTime(s.created_at)}</td>
                   <td className="px-4 py-3">
                     <div className="h-10 w-10 rounded-lg overflow-hidden bg-zinc-100 border border-border">
-                      {s.articles?.image || (s.articles?.images?.[0]) ? (
-                        <img src={s.articles?.image || s.articles?.images?.[0]} alt="" className="w-full h-full object-cover" />
+                      {s.articles?.image || s.articles?.images?.[0] || s.items?.[0]?.image ? (
+                        <img src={s.articles?.image || s.articles?.images?.[0] || s.items?.[0]?.image} alt="" className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-zinc-300"><ShoppingBag className="h-4 w-4" /></div>
                       )}
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <p className="font-medium">{s.articles?.designation ?? "—"}</p>
+                    <p className="font-medium">{s.articles?.designation ?? s.items?.[0]?.designation ?? "—"}</p>
                     <p className="text-xs text-muted-foreground">{s.articles?.reference}</p>
                   </td>
                   <td className="px-4 py-3 text-center">{s.quantite}</td>

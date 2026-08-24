@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import {
   Plus, Trash2, Truck, Filter, Search, Download, CheckCheck,
   XCircle, RotateCcw, Calendar as CalendarIcon, ChevronLeft, ChevronRight,
-  FileText, CreditCard, Eye, Package, MapPin, Phone, User,
+  FileText, CreditCard, Eye, Package, MapPin, Phone, User, Clock,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -221,6 +221,41 @@ function CommandesLivraisonPage() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const bulkHold = useMutation({
+    mutationFn: async () => {
+      const ids = Array.from(selectedIds);
+      if (ids.length === 0) return;
+      for (const id of ids) {
+        const { error } = await supabase.rpc("update_delivery_status", { p_id: id, p_status: "en_attente" });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      toast.success(`${selectedIds.size} commande(s) mise(s) en attente`);
+      setSelectedIds(new Set());
+      qc.invalidateQueries({ queryKey: ["commandes-livraison-v2"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const bulkDelete = useMutation({
+    mutationFn: async () => {
+      const ids = Array.from(selectedIds);
+      if (ids.length === 0) return;
+      if (!confirm(`Supprimer définitivement ${ids.length} commande(s) ?`)) throw new Error("Annulé");
+      for (const id of ids) {
+        const { error } = await supabase.from("commandes_livraison").delete().eq("id", id);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      toast.success("Commande(s) supprimée(s)");
+      setSelectedIds(new Set());
+      qc.invalidateQueries({ queryKey: ["commandes-livraison-v2"] });
+    },
+    onError: (e: any) => { if (e.message !== "Annulé") toast.error(e.message); },
+  });
+
   const cancelDelivery = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.rpc("update_delivery_status", { p_id: id, p_status: "cancelled" });
@@ -393,7 +428,7 @@ function CommandesLivraisonPage() {
           ]}
         />
         <Select value={courierFilter} onValueChange={setCourierFilter}>
-          <SelectTrigger className="w-[200px] h-9 text-xs">
+          <SelectTrigger className="w-[200px] h-9 text-xs bg-white">
             <Truck className="h-3.5 w-3.5 mr-2" />
             <SelectValue placeholder="Transporteur" />
           </SelectTrigger>
@@ -406,9 +441,17 @@ function CommandesLivraisonPage() {
           <CalendarIcon className="h-4 w-4 mr-2" /> Calendrier
         </Button>
         {selectedIds.size > 0 && (
-          <Button size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => bulkPay.mutate()} disabled={bulkPay.isPending}>
-            <CreditCard className="h-4 w-4 mr-2" /> Marquer payées ({selectedIds.size})
-          </Button>
+          <>
+            <Button size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => bulkPay.mutate()} disabled={bulkPay.isPending}>
+              <CreditCard className="h-4 w-4 mr-2" /> Marquer payées ({selectedIds.size})
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => bulkHold.mutate()} disabled={bulkHold.isPending} className="border-amber-300 text-amber-700 bg-white">
+              <Clock className="h-4 w-4 mr-2" /> Mettre en attente ({selectedIds.size})
+            </Button>
+            <Button size="sm" variant="destructive" onClick={() => bulkDelete.mutate()} disabled={bulkDelete.isPending} className="bg-red-600 text-white hover:bg-red-700">
+              <Trash2 className="h-4 w-4 mr-2" /> Supprimer ({selectedIds.size})
+            </Button>
+          </>
         )}
         <span className="text-xs text-zinc-400 font-medium ml-auto">
           {filtered.length} commande(s)

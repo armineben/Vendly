@@ -373,6 +373,7 @@ function CaissePage() {
       prix_unitaire: effPrice(i),
       taille: i.taille,
       couleur: i.couleur,
+      image: i.image,
     }));
 
   const deductStock = async () => {

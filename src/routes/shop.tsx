@@ -1278,6 +1278,7 @@ USING (true);
         prix_unitaire: item.prix_vente,
         taille: item.taille_selectionnee,
         couleur: item.couleur_selectionnee,
+        image: item.image,
       }));
       const { error } = await supabase.from("reservations").insert([
         {
@@ -1338,6 +1339,7 @@ USING (true);
         prix_unitaire: item.prix_vente,
         taille: item.taille_selectionnee,
         couleur: item.couleur_selectionnee,
+        image: item.image,
       }));
 
       const decrementStock = async () => {
