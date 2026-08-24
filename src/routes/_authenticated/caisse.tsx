@@ -486,6 +486,12 @@ function CaissePage() {
         statut: "en_attente",
       };
 
+      // Numéro de réservation séquentiel (RES-0001, ...)
+      const { data: resNumber } = await supabase.rpc("get_next_number", {
+        p_prefix: "RES",
+      });
+      if (resNumber) basePayload.document_number = resNumber;
+
       // Insertion résiliente : si contrainte NOT NULL (23502) ou colonne manquante
       // (42703) sur le schéma actuel, on complète avec les colonnes héritées.
       let { error } = await supabase.from("reservations").insert([basePayload]);

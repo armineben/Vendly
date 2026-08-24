@@ -1390,9 +1390,14 @@ USING (true);
             "Veuillez remplir le Nom, Téléphone, Gouvernorat et Adresse de livraison.",
           );
         }
+        // Numéro de bon de livraison séquentiel (DEL-0001, ...)
+        const { data: delNumber } = await supabase.rpc("get_next_number", {
+          p_prefix: "DEL",
+        });
         const deliveryPayload: Record<string, any> = {
           items: cartItems,
           total_price: cartTotal + shippingFeeTnd,
+          document_number: delNumber || undefined,
           client_firstname: customerData.prenom,
           client_lastname: customerData.nom,
           client_phone: customerData.telephone,
@@ -1434,12 +1439,17 @@ USING (true);
 
         await decrementStock();
       } else {
+        // Numéro de réservation séquentiel (RES-0001, ...)
+        const { data: resNumber } = await supabase.rpc("get_next_number", {
+          p_prefix: "RES",
+        });
         const { error: resError } = await supabase.from("reservations").insert([
           {
             nom: customerData.nom,
             prenom: customerData.prenom,
             telephone: customerData.telephone,
             items: cartItems,
+            document_number: resNumber || undefined,
             date_expiration: new Date(
               Date.now() + 24 * 60 * 60 * 1000,
             ).toISOString(),
@@ -1450,7 +1460,7 @@ USING (true);
         await decrementStock();
       }
     },
-    onSuccess: (_, mode) => {
+    onSuccess: async (_, mode) => {
       const msgs: Record<string, string> = {
         purchase: "Vente comptoir enregistrée !",
         delivery: "Commande créée avec succès ✓",
@@ -1459,7 +1469,11 @@ USING (true);
       toast.success(msgs[mode] || "Succès !");
 
       if (mode === "purchase" || mode === "delivery") {
-        const invNumber = `FACT-${Date.now().toString(36).toUpperCase()}-${String(Math.floor(Math.random() * 999)).padStart(3, "0")}`;
+        // Numéro de facture séquentiel (FACT-0001, ...)
+        const { data: factNumber } = await supabase.rpc("get_next_number", {
+          p_prefix: "FACT",
+        });
+        const invNumber = factNumber || `FACT-${Date.now().toString(36).toUpperCase()}`;
         setInvoiceData({
           invoiceNumber: invNumber,
           createdAt: new Date().toISOString(),
