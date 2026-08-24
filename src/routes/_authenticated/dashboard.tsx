@@ -8,7 +8,7 @@ import {
 import {
   TrendingUp, Wallet, ShoppingBag, Receipt,
   AlertTriangle, Users, Calendar, ArrowUpRight, ArrowDownRight,
-  Sparkles, Clock, Package, Camera, Loader2, Mail, Eye,
+  Sparkles, Clock, Package, Camera, Loader2, Mail, Eye, RefreshCw, Undo2, DollarSign,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -180,6 +180,21 @@ function DashboardPage() {
   });
   const conversionRate =
     visitsCount > 0 ? ((salesCount / visitsCount) * 100).toFixed(1) : "0";
+
+  // ── SAV : Retours & Remboursements ──────────────────────────
+  const { data: returns = [] } = useQuery({
+    queryKey: ["kpi-returns"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("returns").select("status, amount");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const pendingReturns = returns.filter((r: any) => r.status === "en_attente").length;
+  const refundsTotal = returns
+    .filter((r: any) => r.status === "rembourse")
+    .reduce((s: number, r: any) => s + Number(r.amount || 0), 0);
+  const returnRate = salesCount > 0 ? ((returns.length / salesCount) * 100).toFixed(1) : "0";
 
   const salesToday = sales.filter(s => s.created_at && new Date(s.created_at) >= todayStart);
   const salesYesterday = sales.filter(s => s.created_at && new Date(s.created_at) >= yesterdayStart && new Date(s.created_at) < todayStart);
@@ -513,6 +528,55 @@ function DashboardPage() {
               <span className="inline-flex items-center gap-0.5 mt-1 text-xs font-semibold text-zinc-400">
                 {salesCount} vente{salesCount > 1 ? "s" : ""} / {visitsCount} visite{visitsCount > 1 ? "s" : ""}
               </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ─── SAV : RETOURS & REMBOURSEMENTS ─── */}
+      <div>
+        <h3 className="font-bold text-zinc-800 mb-4 flex items-center gap-2">
+          <RefreshCw className="h-4 w-4" /> SAV · Retours & Remboursements
+        </h3>
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="rounded-3xl bg-white p-5 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] uppercase tracking-wider font-bold text-zinc-400">Taux de retour</span>
+              <div className="p-2 rounded-xl bg-orange-50 text-orange-600">
+                <Undo2 className="h-4 w-4" />
+              </div>
+            </div>
+            <div className="mt-4">
+              <p className="text-2xl font-black text-zinc-800 tracking-tight">{returnRate}%</p>
+              <span className="inline-flex items-center gap-0.5 mt-1 text-xs font-semibold text-zinc-400">
+                {returns.length} retour{returns.length > 1 ? "s" : ""} / {salesCount} vente{salesCount > 1 ? "s" : ""}
+              </span>
+            </div>
+          </div>
+
+          <div className="rounded-3xl bg-white p-5 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] uppercase tracking-wider font-bold text-zinc-400">Remboursements</span>
+              <div className="p-2 rounded-xl bg-blue-50 text-blue-600">
+                <DollarSign className="h-4 w-4" />
+              </div>
+            </div>
+            <div className="mt-4">
+              <p className="text-2xl font-black text-zinc-800 tracking-tight">{formatCurrency(refundsTotal)}</p>
+              <span className="inline-flex items-center gap-0.5 mt-1 text-xs font-semibold text-zinc-400">montant remboursé</span>
+            </div>
+          </div>
+
+          <div className="rounded-3xl bg-white p-5 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] uppercase tracking-wider font-bold text-zinc-400">Retours en attente</span>
+              <div className="p-2 rounded-xl bg-amber-50 text-amber-600">
+                <Clock className="h-4 w-4" />
+              </div>
+            </div>
+            <div className="mt-4">
+              <p className="text-2xl font-black text-zinc-800 tracking-tight">{pendingReturns}</p>
+              <span className="inline-flex items-center gap-0.5 mt-1 text-xs font-semibold text-zinc-400">à traiter</span>
             </div>
           </div>
         </div>
