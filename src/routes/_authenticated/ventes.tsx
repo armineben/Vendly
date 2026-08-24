@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Trash2, Download, ShoppingBag } from "lucide-react";
 import * as XLSX from "xlsx";
@@ -27,6 +28,28 @@ function VentesPage() {
       return data ?? [];
     },
   });
+
+  // Enrichir les items (JSONB) avec les images/articles manquants
+  const [articleMap, setArticleMap] = useState<Record<string, any>>({});
+  useEffect(() => {
+    const ids = new Set<string>();
+    sales.forEach((s: any) => {
+      if (Array.isArray(s.items)) {
+        s.items.forEach((it: any) => { if (it.article_id) ids.add(it.article_id); });
+      }
+    });
+    const idList = Array.from(ids);
+    if (idList.length === 0) return;
+    supabase
+      .from("articles")
+      .select("id, image, images, designation, reference")
+      .in("id", idList)
+      .then(({ data }) => {
+        const map: Record<string, any> = {};
+        (data ?? []).forEach((a: any) => (map[a.id] = a));
+        setArticleMap(map);
+      });
+  }, [sales]);
 
   const cancel = useMutation({
     mutationFn: async (id: string) => {
@@ -98,15 +121,15 @@ function VentesPage() {
                   <td className="px-4 py-3 text-muted-foreground">{formatDateTime(s.created_at)}</td>
                   <td className="px-4 py-3">
                     <div className="h-10 w-10 rounded-lg overflow-hidden bg-zinc-100 border border-border">
-                      {s.articles?.image || s.articles?.images?.[0] || s.items?.[0]?.image ? (
-                        <img src={s.articles?.image || s.articles?.images?.[0] || s.items?.[0]?.image} alt="" className="w-full h-full object-cover" />
+                      {s.articles?.image || s.articles?.images?.[0] || s.items?.[0]?.image || (s.items?.[0]?.article_id && articleMap[s.items[0].article_id]?.image) || (s.items?.[0]?.article_id && articleMap[s.items[0].article_id]?.images?.[0]) ? (
+                        <img src={s.articles?.image || s.articles?.images?.[0] || s.items?.[0]?.image || (s.items?.[0]?.article_id && articleMap[s.items[0].article_id]?.image) || (s.items?.[0]?.article_id && articleMap[s.items[0].article_id]?.images?.[0])} alt="" className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-zinc-300"><ShoppingBag className="h-4 w-4" /></div>
                       )}
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <p className="font-medium">{s.articles?.designation ?? s.items?.[0]?.designation ?? "—"}</p>
+                    <p className="font-medium">{s.articles?.designation ?? s.items?.[0]?.designation ?? (s.items?.[0]?.article_id && articleMap[s.items[0].article_id]?.designation) ?? "—"}</p>
                     <p className="text-xs text-muted-foreground">{s.articles?.reference}</p>
                   </td>
                   <td className="px-4 py-3 text-center">{s.quantite}</td>

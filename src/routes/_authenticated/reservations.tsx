@@ -110,6 +110,28 @@ function ReservationsPage() {
     },
   });
 
+  // Enrichir les items (JSONB) avec les images/articles manquants
+  const [articleMap, setArticleMap] = useState<Record<string, any>>({});
+  useEffect(() => {
+    const ids = new Set<string>();
+    reservations.forEach((r: any) => {
+      if (Array.isArray(r.items)) {
+        r.items.forEach((it: any) => { if (it.article_id) ids.add(it.article_id); });
+      }
+    });
+    const idList = Array.from(ids);
+    if (idList.length === 0) return;
+    supabase
+      .from("articles")
+      .select("id, image, images, designation, reference")
+      .in("id", idList)
+      .then(({ data }) => {
+        const map: Record<string, any> = {};
+        (data ?? []).forEach((a: any) => (map[a.id] = a));
+        setArticleMap(map);
+      });
+  }, [reservations]);
+
   const { data: articles = [] } = useQuery({
     queryKey: ["articles-select"],
     queryFn: async () => {
@@ -305,7 +327,17 @@ function ReservationsPage() {
               <tbody className="divide-y divide-border/40">
                 {filteredReservations.map((r: any) => {
                   const expInfo = getExpirationInfo(r);
-                  const imgUrl = getImageUrl(r);
+                  const firstItem = Array.isArray(r.items) && r.items.length > 0 ? r.items[0] : null;
+                  const art = firstItem?.article_id ? articleMap[firstItem.article_id] : null;
+                  const imgUrl =
+                    r.articles?.image ||
+                    r.articles?.images?.[0] ||
+                    firstItem?.image ||
+                    art?.image ||
+                    art?.images?.[0] ||
+                    null;
+                  const title = r.articles?.designation || firstItem?.designation || art?.designation || getItemsLabel(r).title;
+                  const ref = r.articles?.reference || art?.reference || getItemsLabel(r).ref;
                   return (
                   <tr key={r.id} className="hover:bg-secondary/30 transition-colors">
                     <td className="px-4 py-3">
@@ -318,8 +350,8 @@ function ReservationsPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="font-medium">{getItemsLabel(r).title}</span>
-                      <span className="ml-2 text-xs text-muted-foreground">{getItemsLabel(r).ref}</span>
+                      <span className="font-medium">{title}</span>
+                      <span className="ml-2 text-xs text-muted-foreground">{ref}</span>
                     </td>
                     <td className="px-4 py-3">{getClientName(r)}</td>
                     <td className="px-4 py-3 text-muted-foreground">{r.client_phone || r.telephone || "—"}</td>
