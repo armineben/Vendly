@@ -37,7 +37,27 @@ const DELAI_OPTIONS = [
 ];
 
 function getImageUrl(r: any): string | null {
-  return r.articles?.image || (r.articles?.images?.[0]) || null;
+  if (r.articles?.image || r.articles?.images?.[0]) return r.articles.image || r.articles.images?.[0] || null;
+  if (Array.isArray(r.items) && r.items.length > 0) {
+    return r.items[0].image || null;
+  }
+  return null;
+}
+
+function getItemsLabel(r: any): { title: string; ref: string } {
+  if (r.articles) return { title: r.articles.designation || "—", ref: r.articles.reference || "" };
+  if (Array.isArray(r.items) && r.items.length > 0) {
+    const first = r.items[0];
+    const extra = r.items.length > 1 ? ` +${r.items.length - 1}` : "";
+    return { title: `${first.designation || "Article"}${extra}`, ref: "" };
+  }
+  return { title: "—", ref: "" };
+}
+
+function getClientName(r: any): string {
+  if (r.client_name) return r.client_name;
+  if (r.prenom || r.nom) return `${r.prenom || ""} ${r.nom || ""}`.trim();
+  return "—";
 }
 
 function getExpirationInfo(r: any): { label: string; urgent: boolean; expiree: boolean } {
@@ -83,7 +103,7 @@ function ReservationsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("reservations")
-        .select("*, articles(reference, designation, prix_vente, prix_achat, image, images), profiles!created_by(display_name)")
+        .select("*, articles(reference, designation, prix_vente, prix_achat, image, images)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data ?? [];
@@ -183,7 +203,7 @@ function ReservationsPage() {
 
   const filteredReservations = useMemo(() => {
     if (statusFilter === "all") return reservations;
-    return reservations.filter((r: any) => r.status === statusFilter);
+    return reservations.filter((r: any) => (r.status || r.statut) === statusFilter);
   }, [reservations, statusFilter]);
 
   return (
@@ -298,11 +318,11 @@ function ReservationsPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="font-medium">{r.articles?.designation || "—"}</span>
-                      <span className="ml-2 text-xs text-muted-foreground">{r.articles?.reference}</span>
+                      <span className="font-medium">{getItemsLabel(r).title}</span>
+                      <span className="ml-2 text-xs text-muted-foreground">{getItemsLabel(r).ref}</span>
                     </td>
-                    <td className="px-4 py-3">{r.client_name}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{r.client_phone}</td>
+                    <td className="px-4 py-3">{getClientName(r)}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{r.client_phone || r.telephone || "—"}</td>
                     {isAdmin && <td className="px-4 py-3 text-muted-foreground text-xs">{r.profiles?.display_name || "—"}</td>}
                     <td className="px-4 py-3">
                       <span className={`text-xs whitespace-nowrap ${expInfo.expiree ? "text-red-500 line-through" : expInfo.urgent ? "text-amber-600 font-semibold" : "text-muted-foreground"}`}>
@@ -310,18 +330,18 @@ function ReservationsPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      {r.status === "actif" && (
+                      {((r.status || r.statut) === "actif" || (r.status || r.statut) === "en_attente") && (
                         <span className={`inline-block rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${expInfo.expiree ? "bg-red-50 text-red-600 border-red-200" : expInfo.urgent ? "bg-amber-50 text-amber-700 border-amber-200 animate-pulse" : "bg-blue-50 text-blue-600 border-blue-200"}`}>
                           {expInfo.label}
                         </span>
                       )}
-                      {r.status !== "actif" && (
+                      {(r.status || r.statut) !== "actif" && (r.status || r.statut) !== "en_attente" && (
                         <span className="text-xs text-muted-foreground">—</span>
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-block rounded-md border px-2.5 py-0.5 text-xs font-medium ${STATUS_COLORS[r.status] || ""}`}>
-                        {STATUS_LABELS[r.status] || r.status}
+                      <span className={`inline-block rounded-md border px-2.5 py-0.5 text-xs font-medium ${STATUS_COLORS[r.status || r.statut] || ""}`}>
+                        {STATUS_LABELS[r.status || r.statut] || (r.status || r.statut)}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">

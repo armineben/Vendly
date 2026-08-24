@@ -1415,34 +1415,10 @@ USING (true);
         };
         await insertDelivery(deliveryPayload);
 
-        // Paiement en ligne (Carte / e-Dinar) : fonds déjà perçus → enregistrer dans sales (Ventes).
-        // Paiement à la livraison (Espèces) : la vente ne sera enregistrée dans sales que lorsque
-        // l'admin validera la réception des fonds depuis la page Livraison.
-        const isOnlinePayment = (customerData.paymentMethod || "cod") !== "cod";
-        if (isOnlinePayment) {
-          const saleItems = cart.map((item) => ({
-            article_id: item.id,
-            variante_id: item.variante_id,
-            quantite: item.quantite_selectionnee,
-            designation: item.designation,
-            prix_unitaire: item.prix_vente,
-            taille: item.taille_selectionnee,
-            couleur: item.couleur_selectionnee,
-          }));
-          const { error: saleError } = await supabase.from("sales").insert([
-            {
-              items: saleItems,
-              total: cartTotal + shippingFeeTnd,
-              customer_name:
-                `${customerData.prenom} ${customerData.nom}`.trim() ||
-                "Client boutique",
-              customer_phone: customerData.telephone || "",
-              payment_method: customerData.paymentMethod || "card",
-              statut: "validee",
-            },
-          ]);
-          if (saleError && saleError.code !== "42703") throw saleError;
-        }
+        // Quelle que soit le mode de paiement, la commande alimente UNIQUEMENT la page
+        // Livraison (commandes_livraison). La vente ne sera créée dans sales (page Achat)
+        // que lorsque l'administrateur validera la réception des fonds (statut "payé")
+        // depuis la page Livraison, après livraison par la société de transport.
 
         await decrementStock();
       } else {
@@ -1465,7 +1441,7 @@ USING (true);
     onSuccess: (_, mode) => {
       const msgs: Record<string, string> = {
         purchase: "Vente comptoir enregistrée !",
-        delivery: "Commande livraison créée !",
+        delivery: "Commande créée avec succès ✓",
         reservation: "Réservation confirmée !",
       };
       toast.success(msgs[mode] || "Succès !");
