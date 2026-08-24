@@ -64,7 +64,9 @@ function VentesPage() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  function exportXlsx() {
+  async function exportXlsx() {
+    const { getInvoiceLocation } = await import("@/lib/invoice-location");
+    const loc = await getInvoiceLocation();
     const rows = sales.map((s: any) => ({
       Date: formatDateTime(s.created_at),
       Article: s.articles?.designation,
@@ -78,7 +80,7 @@ function VentesPage() {
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Ventes");
-    XLSX.writeFile(wb, `ventes-${new Date().toISOString().slice(0, 10)}.xlsx`);
+    XLSX.writeFile(wb, `${loc}ventes-${new Date().toISOString().slice(0, 10)}.xlsx`);
   }
 
   const totalCA = sales.reduce((s, r) => s + Number(r.total), 0);

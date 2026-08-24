@@ -291,12 +291,14 @@ function CommandesLivraisonPage() {
 
   // ── PDF Generation ───────────────────────────────────────────
 
-  function generatePdf(c: any) {
+  async function generatePdf(c: any) {
+    const { getInvoiceLocation } = await import("@/lib/invoice-location");
+    const loc = await getInvoiceLocation();
     const doc = new jsPDF();
     doc.setFontSize(16);
     doc.text("BORDEREAU DE LIVRAISON", 14, 20);
     doc.setFontSize(10);
-    doc.text(`N° commande : ${c.id?.slice(0, 8)}`, 14, 30);
+    doc.text(`N° : ${c.document_number || "DEL-" + c.id?.slice(0, 8)}`, 14, 30);
     doc.text(`Date : ${formatDateTime(c.created_at)}`, 14, 36);
 
     doc.setFontSize(12);
@@ -333,7 +335,7 @@ function CommandesLivraisonPage() {
 
     doc.setFontSize(8);
     doc.text("Vendly — Document généré automatiquement", 14, finalY + 20);
-    doc.save(`livraison-${c.id?.slice(0, 8)}.pdf`);
+    doc.save(`${loc}livraison-${c.document_number || c.id?.slice(0, 8)}.pdf`);
     toast.success("Bordereau PDF généré");
   }
 

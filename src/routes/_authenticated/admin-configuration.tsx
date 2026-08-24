@@ -364,10 +364,12 @@ function BannersTab() {
   const [heroFemmeSub, setHeroFemmeSub] = useState("");
   const [heroEnfantSub, setHeroEnfantSub] = useState("");
   const [bannerCfg, setBannerCfg] = useState<Record<string, BannerCategoryConfig>>({});
+  const [invoiceLocation, setInvoiceLocation] = useState("factures/");
 
   useEffect(() => {
     if (!config) return;
     setBannerType(config.banner_type ?? "video");
+    setInvoiceLocation(config.invoice_location ?? "factures/");
     setDefaultVideo(config.video_default ?? "");
     setVideoHomme(config.video_homme ?? "");
     setVideoFemme(config.video_femme ?? "");
@@ -417,6 +419,7 @@ function BannersTab() {
         subtitle_homme: heroHommeSub || null,
         subtitle_femme: heroFemmeSub || null,
         subtitle_enfant: heroEnfantSub || null,
+        invoice_location: invoiceLocation || "factures/",
         config_json: {
           ...config?.config_json,
           banner_images: bannerImages.filter(Boolean),
@@ -633,6 +636,24 @@ function BannersTab() {
           <div className="absolute bottom-2 right-3 text-[9px] text-white/30 uppercase tracking-wider">
             <Eye className="h-3 w-3 inline mr-1" />
             {bannerType === "video" ? "Vidéo" : "Diaporama"} • {bannerCfg.default?.type ?? bannerType}
+          </div>
+        </div>
+      </CardSection>
+
+      <CardSection title="Factures — Emplacement de stockage">
+        <div className="flex items-end gap-3">
+          <div className="flex-1">
+            <Label>Chemin d'enregistrement des factures</Label>
+            <Input
+              value={invoiceLocation}
+              onChange={(e) => setInvoiceLocation(e.target.value)}
+              placeholder="factures/"
+              className="mt-1 h-10 font-mono text-sm"
+            />
+            <p className="mt-1 text-xs text-slate-400">
+              Utilisé comme préfixe de dossier lors de la génération / export des factures
+              (FACT-0001.pdf, bons de livraison DEL-0001, etc.).
+            </p>
           </div>
         </div>
       </CardSection>
