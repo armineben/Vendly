@@ -38,7 +38,7 @@ export const Route = createFileRoute("/_authenticated")({
 });
 
 const navItems = [
-  { to: "/caisse" as any, label: "Caisse", icon: ShoppingCart, adminOnly: true },
+  { to: "/caisse" as any, label: "Caisse", icon: ShoppingCart, adminOnly: false },
   { to: "/dashboard" as any, label: "Tableau de bord", icon: LayoutDashboard, adminOnly: true },
   { to: "/catalogue" as any, label: "Catalogue", icon: Sparkles, adminOnly: false },
   { to: "/stock" as any, label: "Stock", icon: Package, adminOnly: true },
@@ -78,7 +78,7 @@ function AuthenticatedLayout() {
   }, [loading, user, navigate]);
 
   useEffect(() => {
-    const allowedForNonAdmin = ["/catalogue", "/profil", "/reservations", "/commandes-livraison", "/historique"];
+    const allowedForNonAdmin = ["/catalogue", "/profil", "/reservations", "/commandes-livraison", "/historique", "/caisse"];
     if (!loading && user && role && !isAdmin && !allowedForNonAdmin.some((p) => pathname.startsWith(p))) {
       navigate({ to: "/catalogue" as any });
     }
