@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import {
   Plus, Trash2, Truck, Filter, Search, Download, CheckCheck,
@@ -68,12 +68,33 @@ function CommandesLivraisonPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("commandes_livraison")
-        .select("*, profiles!created_by(display_name)")
+        .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data ?? [];
     },
   });
+
+  // ── Realtime : actualisation en direct des commandes ─────────
+  useEffect(() => {
+    const sub = supabase
+      .channel("commandes-livraison-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "commandes_livraison",
+        },
+        () => {
+          qc.invalidateQueries({ queryKey: ["commandes-livraison-v2"] });
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(sub);
+    };
+  }, [qc]);
 
   // ── Derived stats ────────────────────────────────────────────
 
