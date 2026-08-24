@@ -1326,7 +1326,9 @@ USING (true);
   });
 
   const checkoutMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (
+      mode: "purchase" | "delivery" | "reservation",
+    ) => {
       if (cart.length === 0) return;
       const cartItems = cart.map((item) => ({
         article_id: item.id,
@@ -1353,7 +1355,7 @@ USING (true);
         }
       };
 
-      if (confirmMode === "purchase") {
+      if (mode === "purchase") {
         const { error: saleError } = await supabase.from("sales").insert([
           {
             items: cartItems,
@@ -1366,7 +1368,7 @@ USING (true);
         ]);
         if (saleError) throw saleError;
         await decrementStock();
-      } else if (confirmMode === "delivery") {
+      } else if (mode === "delivery") {
         if (
           !customerData.address.trim() ||
           !customerData.telephone.trim() ||
@@ -1460,37 +1462,37 @@ USING (true);
         await decrementStock();
       }
     },
-    onSuccess: () => {
+    onSuccess: (_, mode) => {
       const msgs: Record<string, string> = {
         purchase: "Vente comptoir enregistrée !",
         delivery: "Commande livraison créée !",
         reservation: "Réservation confirmée !",
       };
-      toast.success(msgs[confirmMode] || "Succès !");
+      toast.success(msgs[mode] || "Succès !");
 
-      if (confirmMode === "purchase" || confirmMode === "delivery") {
+      if (mode === "purchase" || mode === "delivery") {
         const invNumber = `FACT-${Date.now().toString(36).toUpperCase()}-${String(Math.floor(Math.random() * 999)).padStart(3, "0")}`;
         setInvoiceData({
           invoiceNumber: invNumber,
           createdAt: new Date().toISOString(),
           paymentMethod: "Espèces",
           customerName:
-            confirmMode === "delivery"
+            mode === "delivery"
               ? `${customerData.prenom} ${customerData.nom}`.trim() || undefined
               : undefined,
           customerPhone: customerData.telephone || undefined,
           customerAddress:
-            confirmMode === "delivery" ? customerData.address : undefined,
+            mode === "delivery" ? customerData.address : undefined,
           items: [...cart],
           subtotal: subTotal,
           discountPercent: appliedDiscount > 0 ? appliedDiscount : undefined,
           discountCode: activePromoCode || undefined,
           shippingFees:
-            confirmMode === "delivery" ? shippingFeeTnd : undefined,
+            mode === "delivery" ? shippingFeeTnd : undefined,
           total:
             cartTotal +
-            (confirmMode === "delivery" ? shippingFeeTnd : 0),
-          isDelivery: confirmMode === "delivery",
+            (mode === "delivery" ? shippingFeeTnd : 0),
+          isDelivery: mode === "delivery",
         });
       }
 
@@ -1521,7 +1523,7 @@ USING (true);
       return;
     }
     setConfirmMode("delivery");
-    checkoutMutation.mutate();
+    checkoutMutation.mutate("delivery");
   };
 
   const modalExtraSections = selectedProduct && (
@@ -2282,7 +2284,7 @@ USING (true);
         onConfirm={async () => {
           setShowCartConfirm(false);
           if (confirmMode !== "purchase") {
-            checkoutMutation.mutate();
+            checkoutMutation.mutate(confirmMode);
             return;
           }
           // Détection de conflit : vérifier les réservations actives
@@ -2315,13 +2317,13 @@ USING (true);
                       .update({ statut: "expiré" })
                       .eq("id", conflict.id);
                   }
-                  checkoutMutation.mutate();
+                  checkoutMutation.mutate(confirmMode);
                 },
               });
               return;
             }
           } catch {}
-          checkoutMutation.mutate();
+          checkoutMutation.mutate(confirmMode);
         }}
         mode={confirmMode}
         items={cart}
