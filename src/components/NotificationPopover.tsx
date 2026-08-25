@@ -2,6 +2,7 @@ import { Bell, CheckCheck, Loader2, Trash2 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { useNotifications } from "@/hooks/use-notifications";
+import { useAuth } from "@/hooks/use-auth";
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -21,8 +22,9 @@ function iconForType(type: string): string {
 }
 
 export function NotificationPopover({ userId }: { userId: string | null }) {
+  const { isAdmin } = useAuth();
   const { notifications, unreadCount, loading, markAsRead, markAllAsRead, deleteNotification, deleteAllNotifications } =
-    useNotifications(userId);
+    useNotifications(userId, isAdmin);
 
   return (
     <Popover>

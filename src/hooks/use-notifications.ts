@@ -43,20 +43,22 @@ export async function insertNotification(
 
 // ─── Hook for the UI ────────────────────────────────────────
 
-export function useNotifications(currentUserId: string | null) {
+export function useNotifications(currentUserId: string | null, isAdmin?: boolean) {
   const [notifications, setNotifications] = useState<NotificationRow[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const fetchCount = useCallback(async () => {
     if (!currentUserId) return;
-    const { count } = await supabase
+    let q = supabase
       .from("notifications")
       .select("*", { count: "exact", head: true })
-      .eq("is_read", false)
-      .or(`user_id.eq.${currentUserId},user_id.is.null`);
+      .eq("is_read", false);
+    // Vendeur : uniquement ses notifications. Admin : tout.
+    q = isAdmin ? q : q.eq("user_id", currentUserId);
+    const { count } = await q;
     if (count !== null) setUnreadCount(count);
-  }, [currentUserId]);
+  }, [currentUserId, isAdmin]);
 
   const fetchAll = useCallback(async () => {
     let query = supabase
@@ -65,15 +67,15 @@ export function useNotifications(currentUserId: string | null) {
       .order("created_at", { ascending: false })
       .limit(50);
 
-    if (currentUserId) {
-      query = query.or(`user_id.eq.${currentUserId},user_id.is.null`);
+    if (currentUserId && !isAdmin) {
+      query = query.eq("user_id", currentUserId);
     }
 
     const { data } = await query;
     if (data) setNotifications(data);
     fetchCount();
     setLoading(false);
-  }, [currentUserId, fetchCount]);
+  }, [currentUserId, isAdmin, fetchCount]);
 
   useEffect(() => {
     fetchAll();
